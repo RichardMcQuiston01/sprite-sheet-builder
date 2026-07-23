@@ -1,4 +1,4 @@
-export { buildSpriteSheets } from "./buildSpriteSheets.ts";
+export { buildSpriteSheets, runPipeline } from "./buildSpriteSheets.ts";
 export type { BuildResult } from "./buildSpriteSheets.ts";
 
 export { ConfigValidationError } from "./config/ConfigValidationError.ts";

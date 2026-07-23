@@ -16,13 +16,13 @@ export interface BuildResult {
 }
 
 /**
- * Runs the full pipeline: load config, discover images, pack sheets, and
- * generate CSS, writing all output under `config.outputDirectory`.
+ * Runs the full pipeline against an already-resolved config: discover
+ * images, pack sheets, and generate CSS, writing all output under
+ * `config.outputDirectory`.
  */
-export async function buildSpriteSheets(
-  configPath: string,
+export async function runPipeline(
+  config: ResolvedSpriteSheetConfig,
 ): Promise<BuildResult> {
-  const config = await loadConfig(configPath);
   const outputDirectory = resolve(config.outputDirectory);
 
   const groups = await discoverImageGroups(config);
@@ -35,4 +35,14 @@ export async function buildSpriteSheets(
   }
 
   return { config, sheets, cssFiles };
+}
+
+/**
+ * Reads and validates `configPath` from disk, then runs {@link runPipeline}.
+ */
+export async function buildSpriteSheets(
+  configPath: string,
+): Promise<BuildResult> {
+  const config = await loadConfig(configPath);
+  return runPipeline(config);
 }
