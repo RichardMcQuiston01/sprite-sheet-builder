@@ -7,6 +7,7 @@
 - Apache License, Version 2.0 full text in `LICENSE`.
 - Initial sprite sheet builder implementation: config loading/validation, recursive image discovery, `sharp` + `maxrects-packer`-based sheet packing, CSS generation (`off`/`multiple`/`single` modes), and a `bunx sprite-sheet-builder` CLI entry point.
 - Unit and end-to-end test coverage for config validation, image discovery grouping, CSS class generation/collision handling, and the full build pipeline.
+- `vite` added as an optional peer dependency, in preparation for the Vite plugin subpath export.
 
 ### Changed
 
