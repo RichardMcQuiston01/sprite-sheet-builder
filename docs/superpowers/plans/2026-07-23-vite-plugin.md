@@ -27,6 +27,7 @@
 - Create: `src/discovery/supportedExtensions.ts`
 - Create: `src/discovery/supportedExtensions.test.ts`
 - Modify: `src/discovery/discoverImageGroups.ts`
+- Modify: `CHANGELOG.md`
 
 **Interfaces:**
 - Produces: `SUPPORTED_EXTENSIONS: Set<string>` and `isSupportedImage(filename: string): boolean`, both exported from `src/discovery/supportedExtensions.ts`. The Vite plugin's file watcher (Task 6) imports `isSupportedImage` from here.
@@ -121,11 +122,19 @@ function isSupportedImage(filename: string): boolean {
 Run: `bun run typecheck && bun run lint && bun test`
 Expected: typecheck and lint produce no errors; all existing tests plus the 3 new ones pass (20 total).
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Update CHANGELOG.md**
+
+In `CHANGELOG.md`, under the existing `### Changed` list in `## [Unreleased]`, add:
+
+```md
+- Extracted `isSupportedImage`/`SUPPORTED_EXTENSIONS` into `src/discovery/supportedExtensions.ts` (internal refactor, no behavior change).
+```
+
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/discovery/supportedExtensions.ts src/discovery/supportedExtensions.test.ts src/discovery/discoverImageGroups.ts
-git commit -m "refactor(discovery): extract isSupportedImage into its own module
+git add src/discovery/supportedExtensions.ts src/discovery/supportedExtensions.test.ts src/discovery/discoverImageGroups.ts CHANGELOG.md
+git commit -m "refactor(discovery): extract isSupportedImage
 
 Pulls the extension check out of discoverImageGroups.ts so the
 upcoming Vite plugin file watcher can filter fs events the same way,
@@ -139,6 +148,7 @@ without duplicating the extension list."
 **Files:**
 - Create: `src/testing/imageFixtures.ts`
 - Modify: `src/buildSpriteSheets.test.ts`
+- Modify: `CHANGELOG.md`
 
 **Interfaces:**
 - Produces: `createFixtureDir(prefix: string): Promise<string>`, `removeFixtureDir(dir: string): Promise<void>`, `makeFixtureImage(root: string, relativePath: string, width: number, height: number): Promise<void>` — all exported from `src/testing/imageFixtures.ts`. Tasks 5 and 6's plugin tests reuse these.
@@ -277,11 +287,19 @@ describe("buildSpriteSheets (end-to-end)", () => {
 Run: `bun run typecheck && bun run lint && bun test`
 Expected: no errors; same 20 tests pass as at the end of Task 1 (no count change — this task adds no new tests).
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Update CHANGELOG.md**
+
+In `CHANGELOG.md`, under the existing `### Changed` list in `## [Unreleased]`, add:
+
+```md
+- Extracted shared test fixture helpers into `src/testing/imageFixtures.ts` (internal test infrastructure, no behavior change).
+```
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/testing/imageFixtures.ts src/buildSpriteSheets.test.ts
-git commit -m "refactor(testing): extract shared image fixture helpers
+git add src/testing/imageFixtures.ts src/buildSpriteSheets.test.ts CHANGELOG.md
+git commit -m "refactor(testing): extract fixture helpers
 
 Moves the temp-dir + fixture-PNG helpers out of
 buildSpriteSheets.test.ts into src/testing/imageFixtures.ts so the
@@ -296,6 +314,7 @@ the setup."
 **Files:**
 - Modify: `src/buildSpriteSheets.ts`
 - Modify: `src/index.ts`
+- Modify: `CHANGELOG.md`
 
 **Interfaces:**
 - Consumes: `discoverImageGroups`, `packSheets`, `generateCss`, `loadConfig` (all already exist, signatures unchanged).
@@ -377,11 +396,19 @@ export type { BuildResult } from "./buildSpriteSheets.ts";
 Run: `bun run typecheck && bun run lint && bun test`
 Expected: no errors; the same 20 tests still pass (this is a pure refactor — `buildSpriteSheets`'s external behavior is unchanged, so the existing end-to-end test is sufficient coverage for `runPipeline`; Tasks 5–6 add direct coverage of it via the plugin).
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Update CHANGELOG.md**
+
+In `CHANGELOG.md`, under the existing `### Changed` list in `## [Unreleased]`, add:
+
+```md
+- Extracted `runPipeline` from `buildSpriteSheets` so the CLI and the upcoming Vite plugin share one pipeline implementation (internal refactor, no behavior change).
+```
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/buildSpriteSheets.ts src/index.ts
-git commit -m "refactor(core): extract runPipeline from buildSpriteSheets
+git add src/buildSpriteSheets.ts src/index.ts CHANGELOG.md
+git commit -m "refactor(core): extract runPipeline
 
 Splits config-file loading from the actual discover/pack/CSS
 pipeline so the upcoming Vite plugin can run the same pipeline
@@ -395,6 +422,7 @@ spritesheet.config.json file on disk."
 
 **Files:**
 - Modify: `package.json`
+- Modify: `CHANGELOG.md`
 
 **Interfaces:**
 - Produces: `vite` resolvable in `node_modules` for the next tasks' typecheck/tests; a new `"./vite"` subpath declared in `exports` (pointed at a file created in Task 5).
@@ -452,10 +480,18 @@ Expected: exits 0, `vite` appears under `devDependencies` in the updated `bun.lo
 Run: `bun run typecheck && bun run lint && bun test`
 Expected: no errors (Task 5 hasn't created `src/vite/index.ts` yet, so nothing imports `vite` at this point — this step just confirms the dependency change itself didn't break anything).
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Update CHANGELOG.md**
+
+In `CHANGELOG.md`, under the existing `### Added` list in `## [Unreleased]`, add:
+
+```md
+- `vite` added as an optional peer dependency, in preparation for the Vite plugin subpath export.
+```
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add package.json bun.lock
+git add package.json bun.lock CHANGELOG.md
 git commit -m "build: add vite as an optional peer dependency
 
 Prepares for the Vite plugin subpath export. vite stays optional
@@ -471,6 +507,7 @@ it."
 - Create: `src/vite/spriteSheetBuilderPlugin.ts`
 - Create: `src/vite/index.ts`
 - Create: `src/vite/spriteSheetBuilderPlugin.test.ts`
+- Modify: `CHANGELOG.md`
 
 **Interfaces:**
 - Consumes: `runPipeline(config)` from `../buildSpriteSheets.ts` (Task 3), `validateConfig(raw)` from `../config/loadConfig.ts`, `SpriteSheetConfig` from `../config/types.ts`.
@@ -619,11 +656,19 @@ export { spriteSheetBuilder } from "./spriteSheetBuilderPlugin.ts";
 Run: `bun run typecheck && bun run lint && bun test`
 Expected: no errors; 23 tests total (20 from before + 3 new).
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Update CHANGELOG.md**
+
+In `CHANGELOG.md`, under the existing `### Added` list in `## [Unreleased]`, add:
+
+```md
+- Vite plugin `buildStart` hook (`@richardmcquiston01/sprite-sheet-builder/vite`): runs the sprite sheet pipeline once when a Vite build or dev server starts.
+```
+
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/vite/spriteSheetBuilderPlugin.ts src/vite/index.ts src/vite/spriteSheetBuilderPlugin.test.ts
-git commit -m "feat(vite): add spriteSheetBuilder plugin buildStart hook
+git add src/vite/spriteSheetBuilderPlugin.ts src/vite/index.ts src/vite/spriteSheetBuilderPlugin.test.ts CHANGELOG.md
+git commit -m "feat(vite): add spriteSheetBuilder buildStart
 
 Runs the existing pipeline once at Vite build start, validating
 config eagerly at plugin-creation time so a bad config fails before
@@ -637,6 +682,7 @@ Vite even starts. Dev-mode file watching lands in the next commit."
 **Files:**
 - Modify: `src/vite/spriteSheetBuilderPlugin.ts`
 - Modify: `src/vite/spriteSheetBuilderPlugin.test.ts`
+- Modify: `CHANGELOG.md`
 
 **Interfaces:**
 - Consumes: `isSupportedImage` from `../discovery/supportedExtensions.ts` (Task 1).
@@ -947,11 +993,19 @@ Expected: PASS (7 tests: 3 from Task 5 + 4 new)
 Run: `bun run typecheck && bun run lint && bun test`
 Expected: no errors; 27 tests total (23 from Task 5 + 4 new).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Update CHANGELOG.md**
+
+In `CHANGELOG.md`, under the existing `### Added` list in `## [Unreleased]` (directly below the Task 5 bullet), add:
+
+```md
+- Vite plugin dev-mode file watching: `vite dev` now rebuilds sprite sheets and triggers a full reload automatically when a configured `assetDirectory` image changes.
+```
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/vite/spriteSheetBuilderPlugin.ts src/vite/spriteSheetBuilderPlugin.test.ts
-git commit -m "feat(vite): watch asset directories and rebuild in vite dev
+git add src/vite/spriteSheetBuilderPlugin.ts src/vite/spriteSheetBuilderPlugin.test.ts CHANGELOG.md
+git commit -m "feat(vite): watch assets and rebuild in dev
 
 Uses Vite's own dev-server watcher (chokidar) to detect image
 add/change/unlink under the configured assetDirectory entries,
@@ -967,7 +1021,6 @@ so a bad intermediate save can't crash the dev server."
 
 **Files:**
 - Modify: `README.md`
-- Modify: `CHANGELOG.md`
 
 **Interfaces:** None (docs only).
 
@@ -1001,27 +1054,21 @@ export default defineConfig({
 The plugin takes the same config shape as `spritesheet.config.json` (see above), passed directly as a plain object instead of a file path. It runs the pipeline once when the build/dev server starts, and in `vite dev` it also watches `assetDirectory` for image changes, rebuilding and triggering a full page reload automatically. `vite` is an optional peer dependency — only installing it is required to use this subpath; the CLI works without it.
 ````
 
-- [ ] **Step 2: Add a CHANGELOG entry**
+(No CHANGELOG step here — Tasks 5 and 6 already added their own `### Added` bullets covering the Vite plugin's build-start and dev-watching behavior. Adding a third summary bullet here would just duplicate them.)
 
-In `CHANGELOG.md`, under the existing `### Added` list in `## [Unreleased]`, add a new bullet:
-
-```md
-- Vite plugin (`@richardmcquiston01/sprite-sheet-builder/vite`): runs the existing pipeline at Vite build start, and in `vite dev` watches configured asset directories and rebuilds + full-reloads on image changes.
-```
-
-- [ ] **Step 3: Final full verification**
+- [ ] **Step 2: Final full verification**
 
 Run: `bun run typecheck && bun run lint && bun test`
 Expected: no errors; all 27 tests pass.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add README.md CHANGELOG.md
+git add README.md
 git commit -m "docs: document the Vite plugin usage
 
-Adds a Vite plugin section to the README (config example, optional
-peer dependency note) and a CHANGELOG entry."
+Adds a Vite plugin section to the README: config example and a
+note that vite is an optional peer dependency."
 ```
 
 ---
