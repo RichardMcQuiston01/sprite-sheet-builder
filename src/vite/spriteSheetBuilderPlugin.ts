@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { resolve, sep } from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
 import { runPipeline } from "../buildSpriteSheets.ts";
 import { validateConfig } from "../config/loadConfig.ts";
@@ -26,7 +26,9 @@ export function spriteSheetBuilder(options: SpriteSheetConfig): Plugin {
   function isWatchedImage(filePath: string): boolean {
     return (
       isSupportedImage(filePath) &&
-      watchedDirectories.some((dir) => filePath.startsWith(dir))
+      watchedDirectories.some(
+        (dir) => filePath === dir || filePath.startsWith(dir + sep),
+      )
     );
   }
 

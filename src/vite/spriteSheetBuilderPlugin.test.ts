@@ -219,6 +219,61 @@ describe("spriteSheetBuilder dev watching", () => {
     }
   });
 
+  test("coalesces a change fired mid-rebuild into exactly one follow-up rebuild", async () => {
+    const root = await createFixtureDir(
+      "sprite-sheet-builder-vite-overlap-",
+    );
+    try {
+      const assetDir = join(root, "assets", "icons");
+      // A large real fixture (300 images) so a real `runPipeline` call takes
+      // several hundred ms - long enough to still be in flight when the
+      // second debounce timer below fires at ~330ms, giving genuine overlap
+      // instead of just collapsing two timers that never actually race a
+      // running rebuild. Timed empirically at ~450-500ms on this machine,
+      // comfortably over the ~330ms this test needs it to still be running.
+      for (let i = 0; i < 300; i++) {
+        await makeFixtureImage(root, `assets/icons/icon${i}.png`, 100, 100);
+      }
+      const outputDirectory = join(root, "out");
+
+      const plugin = spriteSheetBuilder({
+        assetDirectory: [assetDir],
+        outputDirectory,
+      });
+      await extractHook(plugin.buildStart).call({});
+
+      const { server, sentMessages } = createFakeServer();
+      extractHook(plugin.configureServer)(server);
+
+      const imagePath = join(assetDir, "icon0.png");
+
+      // Fire the first change and let its debounce timer (150ms) fire and
+      // the rebuild actually start, but don't wait for it to finish.
+      server.watcher.emit("change", imagePath);
+      await new Promise((r) => setTimeout(r, 180));
+
+      // Fire a second change while the first rebuild is still in flight.
+      // Its own debounce timer will fire ~150ms later (~330ms total), by
+      // which point the first rebuild (several hundred ms) is still
+      // running, so this must be coalesced via pendingRebuild rather than
+      // starting a second concurrent runPipeline call.
+      server.watcher.emit("change", imagePath);
+
+      // Settle: one full-reload for the in-flight rebuild, then a second
+      // for the coalesced follow-up rebuild that runs after it.
+      await waitFor(() => sentMessages.length >= 2, 5000);
+      await new Promise((r) => setTimeout(r, 200)); // confirm no extra late rebuild
+
+      expect(sentMessages).toHaveLength(2);
+      expect(sentMessages).toEqual([
+        { type: "full-reload" },
+        { type: "full-reload" },
+      ]);
+    } finally {
+      await removeFixtureDir(root);
+    }
+  });
+
   test("ignores events for unrelated files", async () => {
     const root = await createFixtureDir("sprite-sheet-builder-vite-ignore-");
     try {
