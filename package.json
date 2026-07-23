@@ -1,0 +1,53 @@
+{
+  "name": "@richardmcquiston01/sprite-sheet-builder",
+  "version": "0.1.0",
+  "description": "Generate sprite sheets and companion CSS from directories of images.",
+  "keywords": [
+    "sprite-sheet",
+    "spritesheet",
+    "css",
+    "images",
+    "build-tool"
+  ],
+  "license": "Apache-2.0",
+  "author": "Richard McQuiston",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RichardMcQuiston01/sprite-sheet-builder.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "type": "module",
+  "bin": {
+    "sprite-sheet-builder": "./bin/sprite-sheet-builder.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "test:file": "bun test",
+    "lint": "eslint .",
+    "lint:file": "eslint"
+  },
+  "dependencies": {
+    "maxrects-packer": "^2.7.3",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/bun": "^1.1.14",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1"
+  }
+}
