@@ -18,12 +18,24 @@ const DEBOUNCE_MS = 150;
 export function spriteSheetBuilder(options: SpriteSheetConfig): Plugin {
   const config = validateConfig(options);
   const watchedDirectories = config.assetDirectory.map((dir) => resolve(dir));
+  const resolvedOutputDirectory = resolve(config.outputDirectory);
 
   let rebuildPromise: Promise<void> | null = null;
   let pendingRebuild = false;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   function isWatchedImage(filePath: string): boolean {
+    // Never treat the pipeline's own output as a change worth rebuilding
+    // for, even if outputDirectory happens to be nested inside a watched
+    // assetDirectory - otherwise every rebuild would write a PNG that
+    // re-triggers the watcher, looping forever.
+    if (
+      filePath === resolvedOutputDirectory ||
+      filePath.startsWith(resolvedOutputDirectory + sep)
+    ) {
+      return false;
+    }
+
     return (
       isSupportedImage(filePath) &&
       watchedDirectories.some(

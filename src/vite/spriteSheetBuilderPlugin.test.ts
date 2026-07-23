@@ -354,4 +354,35 @@ describe("spriteSheetBuilder dev watching", () => {
       await removeFixtureDir(root);
     }
   });
+
+  test("ignores changes under an outputDirectory nested inside assetDirectory", async () => {
+    const root = await createFixtureDir(
+      "sprite-sheet-builder-vite-nested-output-",
+    );
+    try {
+      const assetDir = join(root, "assets", "icons");
+      await makeFixtureImage(root, "assets/icons/star.png", 10, 10);
+      // outputDirectory deliberately nested inside the watched assetDirectory
+      // - the pipeline's own sheet PNGs land here, so a naive watcher would
+      // treat its own output as a fresh change and rebuild forever.
+      const outputDirectory = join(assetDir, "out");
+
+      const plugin = spriteSheetBuilder({
+        assetDirectory: [assetDir],
+        outputDirectory,
+      });
+      await extractHook(plugin.buildStart).call({});
+
+      const { server, sentMessages } = createFakeServer();
+      extractHook(plugin.configureServer)(server);
+
+      server.watcher.emit("change", join(outputDirectory, "icons.png"));
+
+      await new Promise((r) => setTimeout(r, 250));
+
+      expect(sentMessages).toHaveLength(0);
+    } finally {
+      await removeFixtureDir(root);
+    }
+  });
 });
