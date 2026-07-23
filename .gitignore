@@ -1,7 +1,8 @@
 .idea
 .vscode
 
-docs/
+docs/*
+!docs/superpowers/
 .remember/
 CLAUDE.md
 
