@@ -5,6 +5,7 @@ docs/*
 !docs/superpowers/
 .remember/
 CLAUDE.md
+.superpowers/
 
 node_modules/
 *.tsbuildinfo
