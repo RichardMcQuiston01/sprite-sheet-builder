@@ -1,36 +1,21 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
 import { buildSpriteSheets } from "./buildSpriteSheets.ts";
+import {
+  createFixtureDir,
+  makeFixtureImage,
+  removeFixtureDir,
+} from "./testing/imageFixtures.ts";
 
 let root: string;
 
-async function makeImage(
-  relativePath: string,
-  width: number,
-  height: number,
-): Promise<void> {
-  const filePath = join(root, relativePath);
-  await mkdir(join(filePath, ".."), { recursive: true });
-  await sharp({
-    create: {
-      width,
-      height,
-      channels: 4,
-      background: { r: 255, g: 0, b: 0, alpha: 1 },
-    },
-  })
-    .png()
-    .toFile(filePath);
-}
-
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "sprite-sheet-builder-e2e-"));
-  await makeImage("src/icons/social/star.png", 10, 10);
-  await makeImage("src/icons/social/moon.png", 12, 8);
-  await makeImage("src/icons/nav/menu.png", 20, 4);
+  root = await createFixtureDir("sprite-sheet-builder-e2e-");
+  await makeFixtureImage(root, "src/icons/social/star.png", 10, 10);
+  await makeFixtureImage(root, "src/icons/social/moon.png", 12, 8);
+  await makeFixtureImage(root, "src/icons/nav/menu.png", 20, 4);
 
   await writeFile(
     join(root, "spritesheet.config.json"),
@@ -45,7 +30,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
+  await removeFixtureDir(root);
 });
 
 describe("buildSpriteSheets (end-to-end)", () => {

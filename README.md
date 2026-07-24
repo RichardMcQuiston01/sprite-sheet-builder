@@ -63,6 +63,30 @@ Or wire it into your build, e.g. in `package.json`:
 }
 ```
 
+### Vite plugin
+
+Instead of (or alongside) the CLI, use the Vite plugin to run the same pipeline as part of your Vite build, with automatic rebuilds in `vite dev`:
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite";
+import { spriteSheetBuilder } from "@richardmcquiston01/sprite-sheet-builder/vite";
+
+export default defineConfig({
+  plugins: [
+    spriteSheetBuilder({
+      assetDirectory: ["assets/icons"],
+      recursive: "yes",
+      recursiveMethod: "directory",
+      outputDirectory: "public/sprites",
+      generateCSSFile: "multiple",
+    }),
+  ],
+});
+```
+
+The plugin takes the same config shape as `spritesheet.config.json` (see above), passed directly as a plain object instead of a file path. It runs the pipeline once when the build/dev server starts, and in `vite dev` it also watches `assetDirectory` for image changes, rebuilding and triggering a full page reload automatically. `vite` is an optional peer dependency — only installing it is required to use this subpath; the CLI works without it.
+
 ## Development
 
 ```

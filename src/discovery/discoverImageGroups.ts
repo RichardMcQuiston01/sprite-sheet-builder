@@ -1,8 +1,7 @@
 import { readdir } from "node:fs/promises";
-import { basename, extname, join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
+import { isSupportedImage } from "./supportedExtensions.ts";
 import type { ResolvedSpriteSheetConfig } from "../config/types.ts";
-
-const SUPPORTED_EXTENSIONS = new Set([".png", ".jpg", ".jpeg"]);
 
 /** A set of source images destined for one output sprite sheet. */
 export interface SheetGroup {
@@ -106,10 +105,6 @@ async function listImagesRecursively(dir: string): Promise<string[]> {
     }
   }
   return images;
-}
-
-function isSupportedImage(filename: string): boolean {
-  return SUPPORTED_EXTENSIONS.has(extname(filename).toLowerCase());
 }
 
 function sanitizeSegment(segment: string): string {
