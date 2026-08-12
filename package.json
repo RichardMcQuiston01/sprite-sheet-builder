@@ -15,6 +15,10 @@
     "type": "git",
     "url": "git+https://github.com/RichardMcQuiston01/sprite-sheet-builder.git"
   },
+  "homepage": "https://github.com/RichardMcQuiston01/sprite-sheet-builder#readme",
+  "bugs": {
+    "url": "https://github.com/RichardMcQuiston01/sprite-sheet-builder/issues"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -35,7 +39,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "sprite-sheet-builder": "./dist/sprite-sheet-builder.js"
+    "sprite-sheet-builder": "dist/sprite-sheet-builder.js"
   },
   "exports": {
     ".": {

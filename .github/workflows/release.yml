@@ -1,0 +1,55 @@
+name: Release
+
+# Publishes the package to npm when a GitHub Release is published.
+# Cut a release whose tag matches the package.json version (e.g. tag
+# "v0.1.0" for version 0.1.0) and this workflow builds and publishes it.
+#
+# Requires an `NPM_TOKEN` repository secret: an npm automation token with
+# publish rights to the @richardmcquiston01 scope.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify release tag matches package.json version
+        run: |
+          pkg_version="$(node -p "require('./package.json').version")"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$pkg_version" != "$tag" ]; then
+            echo "::error::Release tag '${GITHUB_REF_NAME}' does not match package.json version '${pkg_version}'."
+            echo "Retag the release as 'v${pkg_version}' (or bump package.json) and republish."
+            exit 1
+          fi
+          echo "Publishing version ${pkg_version}."
+
+      - name: Set up Node for npm publish
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # `npm publish` runs the `prepublishOnly` script (bun run build), which
+      # produces the dist/ artifact that the `files` allowlist ships.
+      - name: Publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
