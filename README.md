@@ -20,7 +20,14 @@ To use it in another project, once published:
 
 ```
 bun add -d @richardmcquiston01/sprite-sheet-builder
+# or
+npm install -D @richardmcquiston01/sprite-sheet-builder
 ```
+
+The published package ships compiled JavaScript and type declarations, so it
+runs under Node (≥18) as well as Bun — the `sprite-sheet-builder` CLI works
+with `npx`, and both `@richardmcquiston01/sprite-sheet-builder` and its
+`/vite` subpath are importable from Node ESM projects.
 
 ## Configuration
 
@@ -93,7 +100,12 @@ The plugin takes the same config shape as `spritesheet.config.json` (see above),
 bun run typecheck   # tsc --noEmit
 bun run test         # bun test
 bun run lint         # eslint .
+bun run build        # tsup — emit the publishable dist/ (JS + .d.ts)
 ```
+
+The source runs directly under Bun; `bun run build` (also run automatically
+on `npm publish` via `prepublishOnly`) bundles the Node-consumable artifact
+into `dist/`, which is what gets published.
 
 See [PLAN.md](PLAN.md) for the full design and staged implementation roadmap.
 
