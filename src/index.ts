@@ -19,3 +19,14 @@ export type { SheetGroup } from "./discovery/discoverImageGroups.ts";
 
 export { packSheets } from "./pack/packSheets.ts";
 export type { PackedImage, PackedSheet } from "./pack/packSheets.ts";
+
+export { watchSpriteSheets } from "./watch/watchSpriteSheets.ts";
+export type { SpriteSheetWatcher } from "./watch/watchSpriteSheets.ts";
+export {
+  createSpriteSheetRebuilder,
+  DEFAULT_DEBOUNCE_MS,
+} from "./watch/spriteSheetRebuilder.ts";
+export type {
+  RebuilderHandlers,
+  SpriteSheetRebuilder,
+} from "./watch/spriteSheetRebuilder.ts";
