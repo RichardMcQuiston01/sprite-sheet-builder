@@ -60,6 +60,7 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
+    "chokidar": "^4.0.3",
     "maxrects-packer": "^2.7.3",
     "sharp": "^0.33.5"
   },

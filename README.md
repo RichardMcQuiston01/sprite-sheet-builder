@@ -59,6 +59,16 @@ Generated CSS classes are the sanitized (kebab-case) source filename, e.g. `icon
 bunx sprite-sheet-builder --config spritesheet.config.json
 ```
 
+### Watch mode
+
+Pass `--watch` to keep the CLI running and rebuild automatically whenever a supported image is added, changed, or removed under any `assetDirectory`:
+
+```
+bunx sprite-sheet-builder --config spritesheet.config.json --watch
+```
+
+It builds once on startup, then watches for changes (debounced, one rebuild at a time) until you stop it with `Ctrl+C`. This is the CLI equivalent of the Vite plugin's `vite dev` rebuilding, for projects that don't use Vite. Generated sheets written under a watched directory are ignored, so a rebuild never re-triggers itself.
+
 Or wire it into your build, e.g. in `package.json`:
 
 ```json

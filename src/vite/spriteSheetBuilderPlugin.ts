@@ -1,12 +1,9 @@
-import { resolve, sep } from "node:path";
-import type { Plugin, ViteDevServer } from "vite";
+import { resolve } from "node:path";
+import type { Plugin } from "vite";
 import { runPipeline } from "../buildSpriteSheets.ts";
 import { validateConfig } from "../config/loadConfig.ts";
 import type { SpriteSheetConfig } from "../config/types.ts";
-import { isSupportedImage } from "../discovery/supportedExtensions.ts";
-
-/** How long to wait after the last fs event before rebuilding, in ms. */
-const DEBOUNCE_MS = 150;
+import { createSpriteSheetRebuilder } from "../watch/spriteSheetRebuilder.ts";
 
 /**
  * Vite plugin that runs the sprite sheet pipeline once at build start, and
@@ -18,72 +15,6 @@ const DEBOUNCE_MS = 150;
 export function spriteSheetBuilder(options: SpriteSheetConfig): Plugin {
   const config = validateConfig(options);
   const watchedDirectories = config.assetDirectory.map((dir) => resolve(dir));
-  const resolvedOutputDirectory = resolve(config.outputDirectory);
-
-  let rebuildPromise: Promise<void> | null = null;
-  let pendingRebuild = false;
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function isWatchedImage(filePath: string): boolean {
-    // Never treat the pipeline's own output as a change worth rebuilding
-    // for, even if outputDirectory happens to be nested inside a watched
-    // assetDirectory - otherwise every rebuild would write a PNG that
-    // re-triggers the watcher, looping forever.
-    if (
-      filePath === resolvedOutputDirectory ||
-      filePath.startsWith(resolvedOutputDirectory + sep)
-    ) {
-      return false;
-    }
-
-    return (
-      isSupportedImage(filePath) &&
-      watchedDirectories.some(
-        (dir) => filePath === dir || filePath.startsWith(dir + sep),
-      )
-    );
-  }
-
-  async function runRebuild(server: ViteDevServer): Promise<void> {
-    if (rebuildPromise) {
-      pendingRebuild = true;
-      return;
-    }
-
-    rebuildPromise = (async () => {
-      try {
-        await runPipeline(config);
-        server.config.logger.info(
-          "[sprite-sheet-builder] regenerated sprite sheet(s)",
-          { timestamp: true },
-        );
-        server.ws.send({ type: "full-reload" });
-      } catch (error) {
-        server.config.logger.error(
-          `[sprite-sheet-builder] rebuild failed: ${error instanceof Error ? error.message : String(error)}`,
-          { timestamp: true },
-        );
-      } finally {
-        rebuildPromise = null;
-        if (pendingRebuild) {
-          pendingRebuild = false;
-          await runRebuild(server);
-        }
-      }
-    })();
-
-    return rebuildPromise;
-  }
-
-  function scheduleRebuild(server: ViteDevServer): void {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-    debounceTimer = setTimeout(() => {
-      debounceTimer = null;
-      void runRebuild(server);
-    }, DEBOUNCE_MS);
-  }
 
   return {
     name: "sprite-sheet-builder",
@@ -95,10 +26,24 @@ export function spriteSheetBuilder(options: SpriteSheetConfig): Plugin {
     configureServer(server) {
       server.watcher.add(watchedDirectories);
 
+      const rebuilder = createSpriteSheetRebuilder(config, {
+        onRebuild: () => {
+          server.config.logger.info(
+            "[sprite-sheet-builder] regenerated sprite sheet(s)",
+            { timestamp: true },
+          );
+          server.ws.send({ type: "full-reload" });
+        },
+        onError: (error) => {
+          server.config.logger.error(
+            `[sprite-sheet-builder] rebuild failed: ${error instanceof Error ? error.message : String(error)}`,
+            { timestamp: true },
+          );
+        },
+      });
+
       const handleFsEvent = (filePath: string) => {
-        if (isWatchedImage(filePath)) {
-          scheduleRebuild(server);
-        }
+        rebuilder.notify(filePath);
       };
 
       server.watcher.on("add", handleFsEvent);
