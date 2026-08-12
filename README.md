@@ -117,6 +117,22 @@ The source runs directly under Bun; `bun run build` (also run automatically
 on `npm publish` via `prepublishOnly`) bundles the Node-consumable artifact
 into `dist/`, which is what gets published.
 
+### Releasing
+
+Publishing is automated via GitHub Actions (`.github/workflows/release.yml`):
+
+1. Bump the `version` in `package.json` and move the `CHANGELOG.md`
+   `[Unreleased]` entries under a new version heading.
+2. Publish a GitHub Release whose tag matches that version, prefixed with
+   `v` (e.g. `v0.1.0`). The workflow verifies the tag matches
+   `package.json` before publishing.
+3. The workflow builds and runs `npm publish --provenance --access public`.
+
+This requires an `NPM_TOKEN` repository secret (an npm automation token with
+publish rights to the `@richardmcquiston01` scope). npm provenance also
+requires the repository to be public. To publish manually instead, run
+`npm publish --access public` after `npm login`.
+
 See [PLAN.md](PLAN.md) for the full design and staged implementation roadmap.
 
 ## License
