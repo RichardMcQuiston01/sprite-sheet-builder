@@ -10,6 +10,8 @@
 - `vite` added as an optional peer dependency, so the Vite plugin subpath export can be built against it.
 - Vite plugin `buildStart` hook (`@richardmcquiston01/sprite-sheet-builder/vite`): runs the sprite sheet pipeline once when a Vite build or dev server starts.
 - Vite plugin dev-mode file watching: `vite dev` now rebuilds sprite sheets and triggers a full reload automatically when a configured `assetDirectory` image changes.
+- GitHub Actions CI workflow (`.github/workflows/ci.yml`) running `bun run typecheck`, `bun test`, and `bun run lint` on pushes to the integration branches and on every pull request.
+- Pull request template (`.github/pull_request_template.md`) covering summary, changes, testing, and changelog/docs checklists.
 
 ### Changed
 
