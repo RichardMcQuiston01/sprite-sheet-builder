@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { resolve } from "node:path";
 import { buildSpriteSheets } from "../src/buildSpriteSheets.ts";
 import { ConfigValidationError } from "../src/config/ConfigValidationError.ts";

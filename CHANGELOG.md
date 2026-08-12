@@ -12,6 +12,7 @@
 - Vite plugin dev-mode file watching: `vite dev` now rebuilds sprite sheets and triggers a full reload automatically when a configured `assetDirectory` image changes.
 - GitHub Actions CI workflow (`.github/workflows/ci.yml`) running `bun run typecheck`, `bun test`, and `bun run lint` on pushes to the integration branches and on every pull request.
 - Pull request template (`.github/pull_request_template.md`) covering summary, changes, testing, and changelog/docs checklists.
+- `bun run build` (tsup) that bundles a Node-consumable artifact into `dist/` — compiled ESM plus `.d.ts` type declarations for the CLI, the main entry, and the `/vite` subpath. Wired to run automatically on publish via `prepublishOnly`, and verified in CI.
 
 ### Changed
 
@@ -22,3 +23,4 @@
 - README now documents installation, configuration fields, CLI usage, and development commands.
 - `PLAN.md` rewritten from the original idea into a staged implementation plan.
 - Package renamed to `@richardmcquiston01/sprite-sheet-builder` to match the author's npm scope, with `publishConfig.access` set to `public`.
+- `package.json` now publishes the compiled `dist/` instead of raw `.ts` sources: `bin`, `exports` (with `types`), `main`/`module`/`types`, and `files` all point at `dist/`, so the package is consumable from Node (`engines.node` set to `>=18`) and not just Bun. The CLI shebang changed from `bun` to `node`.

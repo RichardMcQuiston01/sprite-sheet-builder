@@ -34,3 +34,6 @@ jobs:
 
       - name: Lint
         run: bun run lint
+
+      - name: Build (publishable artifact)
+        run: bun run build
