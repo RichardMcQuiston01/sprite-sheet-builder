@@ -4,6 +4,12 @@
 
 Generates sprite sheet image(s) and companion CSS from directories of images, so they can be used efficiently on a website. Ships as a CLI that runs as a pre-build step in a TypeScript/Node project.
 
+## Demo
+
+**Live demo: [sprite-sheet-builder.vercel.app](https://sprite-sheet-builder.vercel.app)**
+
+Every icon on that page is painted from a single sprite sheet and companion CSS that this tool generates from a folder of images at build time — the demo dogfoods the pipeline and is regenerated on each deploy. Source and build script are in [`demo/`](demo/).
+
 ## Tech Stack
 
 - TypeScript / Bun
