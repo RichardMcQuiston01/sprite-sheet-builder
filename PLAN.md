@@ -2,7 +2,7 @@
 
 ## Overview
 
-A publishable TypeScript/Node CLI tool that scans directories of images, packs them into sprite sheet(s), and generates companion CSS, intended to be run as a pre-build step in a TypeScript project (with a bundler plugin wrapper as a later milestone, not v1).
+A publishable TypeScript/Node CLI tool that scans directories of images, packs them into sprite sheet(s), and generates companion CSS, intended to be run as a pre-build step in a TypeScript project. A Vite plugin wrapper shipped alongside the CLI in 0.1.0; other bundler integrations remain future work.
 
 ## Config shape (v1)
 
@@ -41,6 +41,6 @@ interface SpriteSheetConfig {
 
 ## Future Development
 
-- Bundler plugin wrapper (Vite/webpack/esbuild) around the core pipeline.
+- Additional bundler integrations (webpack/esbuild) around the core pipeline (the Vite plugin already shipped in 0.1.0).
 - SVG symbol-sprite support.
 - Auto-detect pages that reference images and automatically include the relevant CSS file(s).

@@ -32,5 +32,8 @@ for (const sheet of result.sheets) {
   );
 }
 
-await cp(join(demoDir, "index.html"), join(publicDir, "index.html"));
+// Static assets that ship alongside the generated sprites.
+for (const asset of ["index.html", "donate-qr.png"]) {
+  await cp(join(demoDir, asset), join(publicDir, asset));
+}
 console.log(`\nDemo built into ${publicDir}`);

@@ -77,4 +77,44 @@ describe("generateCss", () => {
 
     expect(() => generateCss(sheets, "/out", "multiple")).toThrow(/duplicate/i);
   });
+
+  test("throws when a filename has no letters or digits to form a class", () => {
+    const sheets = [
+      sheet("icons", [
+        { sourcePath: "/src/icons/___.png", x: 0, y: 0, width: 10, height: 10 },
+      ]),
+    ];
+
+    expect(() => generateCss(sheets, "/out", "multiple")).toThrow(
+      /empty CSS class/i,
+    );
+  });
+
+  test("'single' throws when disambiguated class names still collide after sanitizing", () => {
+    // "foo.bar" and "foo-bar" both sanitize to "foo-bar", so both star rules
+    // would become ".foo-bar-star" and silently override each other.
+    const sheets = [
+      sheet("foo.bar", [
+        { sourcePath: "/src/foo.bar/star.png", x: 0, y: 0, width: 10, height: 10 },
+      ]),
+      sheet("foo-bar", [
+        { sourcePath: "/src/foo-bar/star.png", x: 0, y: 0, width: 8, height: 8 },
+      ]),
+    ];
+
+    expect(() => generateCss(sheets, "/out", "single")).toThrow(
+      /same CSS class/i,
+    );
+  });
+
+  test("escapes quotes in the generated image URL", () => {
+    const sheets = [
+      sheet('a"b', [
+        { sourcePath: '/src/a"b/star.png', x: 0, y: 0, width: 10, height: 10 },
+      ]),
+    ];
+
+    const files = generateCss(sheets, "/out", "multiple");
+    expect(files[0]?.content).toContain('url("a\\"b.png")');
+  });
 });

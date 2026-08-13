@@ -46,9 +46,25 @@ export async function watchSpriteSheets(
   watcher.on("change", handleFsEvent);
   watcher.on("unlink", handleFsEvent);
 
+  // A persistent error handler for the watcher's whole lifetime: an
+  // unhandled "error" event on an EventEmitter throws, so runtime errors
+  // after startup must be routed somewhere. Before "ready", an error means
+  // startup failed — reject and tear the watcher down; after, forward it to
+  // the caller's onError.
+  let ready = false;
   await new Promise<void>((resolvePromise, rejectPromise) => {
-    watcher.once("ready", () => resolvePromise());
-    watcher.once("error", (error) => rejectPromise(error));
+    watcher.on("error", (error) => {
+      if (ready) {
+        handlers.onError?.(error);
+      } else {
+        void watcher.close();
+        rejectPromise(error);
+      }
+    });
+    watcher.once("ready", () => {
+      ready = true;
+      resolvePromise();
+    });
   });
 
   return {

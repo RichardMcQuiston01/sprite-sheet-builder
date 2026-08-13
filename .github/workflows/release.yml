@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -37,6 +39,14 @@ jobs:
           if [ "$pkg_version" != "$tag" ]; then
             echo "::error::Release tag '${GITHUB_REF_NAME}' does not match package.json version '${pkg_version}'."
             echo "Retag the release as 'v${pkg_version}' (or bump package.json) and republish."
+            exit 1
+          fi
+          # Only publish tags whose commit is on main, so a matching-version
+          # tag cut from dev/staging can't publish unmerged code.
+          git fetch --no-tags --depth=2147483647 origin main
+          release_commit="$(git rev-parse "${GITHUB_REF_NAME}^{commit}")"
+          if ! git merge-base --is-ancestor "$release_commit" FETCH_HEAD; then
+            echo "::error::Release tag '${GITHUB_REF_NAME}' is not an ancestor of main. Release from main."
             exit 1
           fi
           echo "Publishing version ${pkg_version}."

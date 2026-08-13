@@ -70,4 +70,20 @@ describe("buildSpriteSheets (end-to-end)", () => {
     );
     expect(navCssContent).toContain(".menu {");
   });
+
+  test("throws when a single image exceeds the maximum sheet dimension", async () => {
+    await makeFixtureImage(root, "big/huge.png", 5000, 10);
+    await writeFile(
+      join(root, "big.config.json"),
+      JSON.stringify({
+        assetDirectory: [join(root, "big")],
+        outputDirectory: join(root, "out-big"),
+        generateCSSFile: "off",
+      }),
+    );
+
+    await expect(
+      buildSpriteSheets(join(root, "big.config.json")),
+    ).rejects.toThrow(/exceeding/i);
+  });
 });
