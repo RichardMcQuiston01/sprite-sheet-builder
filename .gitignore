@@ -9,6 +9,8 @@ CLAUDE.md
 
 node_modules/
 dist/
+demo/public/
+.vercel
 *.tsbuildinfo
 
 *.log
