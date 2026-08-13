@@ -9,6 +9,12 @@ import { watchSpriteSheets } from "../src/watch/watchSpriteSheets.ts";
 const args = process.argv.slice(2);
 const configArgIndex = args.indexOf("--config");
 const configArg = configArgIndex !== -1 ? args[configArgIndex + 1] : undefined;
+// A trailing `--config` (or one followed by another flag) is a usage error,
+// not a cue to silently fall back to the default config path.
+if (configArgIndex !== -1 && (configArg === undefined || configArg.startsWith("--"))) {
+  console.error("--config requires a file path");
+  process.exit(2);
+}
 const configPath = resolve(configArg ?? "spritesheet.config.json");
 const watch = args.includes("--watch");
 
@@ -53,8 +59,19 @@ try {
       `Watching ${config.assetDirectory.length} director${config.assetDirectory.length === 1 ? "y" : "ies"} for changes. Press Ctrl+C to stop.`,
     );
 
+    let shuttingDown = false;
     const shutdown = () => {
-      void watcher.close().then(() => process.exit(0));
+      if (shuttingDown) {
+        return;
+      }
+      shuttingDown = true;
+      watcher
+        .close()
+        .then(() => process.exit(0))
+        .catch((error) => {
+          reportError(error);
+          process.exit(1);
+        });
     };
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);

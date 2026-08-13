@@ -104,6 +104,13 @@ async function packGroup(
   }
 
   const bin = packer.bins[0]!;
+  if (bin.width > MAX_SHEET_DIMENSION || bin.height > MAX_SHEET_DIMENSION) {
+    throw new Error(
+      `Sprite sheet "${group.outputPath}" is ${bin.width}x${bin.height}px, exceeding the ` +
+        `${MAX_SHEET_DIMENSION}x${MAX_SHEET_DIMENSION}px limit. A single image in "${group.sourceDir}" is ` +
+        `likely larger than the limit; shrink it or split the directory.`,
+    );
+  }
   const packedRects = bin.rects as unknown as PackRect[];
   const packedImages: PackedImage[] = packedRects.map((rect) => ({
     sourcePath: rect.sourcePath,

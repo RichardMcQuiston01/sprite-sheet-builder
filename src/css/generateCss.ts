@@ -65,6 +65,7 @@ function buildSingleFile(
     }
   }
 
+  const finalNames = new Map<string, string>();
   const blocks = perSheetRules.map(({ sheet, rules }) => {
     const imageUrl = `${sheet.outputPath}.png`;
     const disambiguated = rules.map((rule) => {
@@ -72,6 +73,18 @@ function buildSingleFile(
       const className = isColliding
         ? `${sanitize(sheet.outputPath.replace(/\//g, "-"))}-${rule.className}`
         : rule.className;
+      // Sanitizing sheet paths is lossy (e.g. "foo.bar" and "foo-bar" both
+      // collapse to "foo-bar"), so disambiguation can still collide. Reject
+      // rather than silently letting one rule override another.
+      const existing = finalNames.get(className);
+      if (existing !== undefined && existing !== rule.image.sourcePath) {
+        throw new Error(
+          `Two images resolve to the same CSS class ".${className}" in single-file mode ` +
+            `("${existing}" and "${rule.image.sourcePath}"). Rename one of the source ` +
+            `directories or files to avoid the collision.`,
+        );
+      }
+      finalNames.set(className, rule.image.sourcePath);
       return { className, image: rule.image };
     });
     return renderCss(disambiguated, imageUrl);
@@ -84,10 +97,16 @@ function buildSingleFile(
 }
 
 function classRulesForSheet(sheet: PackedSheet): ClassRule[] {
-  const rules = sheet.images.map((image) => ({
-    className: sanitize(basename(image.sourcePath, extname(image.sourcePath))),
-    image,
-  }));
+  const rules = sheet.images.map((image) => {
+    const className = sanitize(basename(image.sourcePath, extname(image.sourcePath)));
+    if (className === "") {
+      throw new Error(
+        `Source file "${image.sourcePath}" has no letters or digits in its name, so it ` +
+          `produces an empty CSS class. Rename it to include at least one letter or digit.`,
+      );
+    }
+    return { className, image };
+  });
   assertUniqueWithinSheet(rules, sheet.outputPath);
   return rules;
 }
@@ -108,12 +127,18 @@ function assertUniqueWithinSheet(
   }
 }
 
+/** Escapes a string for safe use inside a double-quoted CSS `url("...")`. */
+function escapeCssUrl(url: string): string {
+  return url.replace(/[\\"]/g, "\\$&");
+}
+
 function renderCss(rules: readonly ClassRule[], imageUrl: string): string {
+  const url = escapeCssUrl(imageUrl);
   return rules
     .map(
       (rule) =>
         `.${rule.className} {\n` +
-        `  background-image: url("${imageUrl}");\n` +
+        `  background-image: url("${url}");\n` +
         `  background-position: -${rule.image.x}px -${rule.image.y}px;\n` +
         `  width: ${rule.image.width}px;\n` +
         `  height: ${rule.image.height}px;\n` +

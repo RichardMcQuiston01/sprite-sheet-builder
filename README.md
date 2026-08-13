@@ -18,13 +18,13 @@ Every icon on that page is painted from a single sprite sheet and companion CSS 
 
 To work on this repo:
 
-```
+```sh
 bun install
 ```
 
 To use it in another project, once published:
 
-```
+```sh
 bun add -d @richardmcquiston01/sprite-sheet-builder
 # or
 npm install -D @richardmcquiston01/sprite-sheet-builder
@@ -61,7 +61,7 @@ Generated CSS classes are the sanitized (kebab-case) source filename, e.g. `icon
 
 ## Usage
 
-```
+```sh
 bunx sprite-sheet-builder --config spritesheet.config.json
 ```
 
@@ -69,7 +69,7 @@ bunx sprite-sheet-builder --config spritesheet.config.json
 
 Pass `--watch` to keep the CLI running and rebuild automatically whenever a supported image is added, changed, or removed under any `assetDirectory`:
 
-```
+```sh
 bunx sprite-sheet-builder --config spritesheet.config.json --watch
 ```
 
@@ -112,7 +112,7 @@ The plugin takes the same config shape as `spritesheet.config.json` (see above),
 
 ## Development
 
-```
+```sh
 bun run typecheck   # tsc --noEmit
 bun run test         # bun test
 bun run lint         # eslint .
