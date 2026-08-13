@@ -1,5 +1,8 @@
 # Sprite Sheet Builder
 
+[![npm version](https://img.shields.io/npm/v/@richardmcquiston01/sprite-sheet-builder.svg)](https://www.npmjs.com/package/@richardmcquiston01/sprite-sheet-builder)
+[![license](https://img.shields.io/npm/l/@richardmcquiston01/sprite-sheet-builder.svg)](LICENSE)
+
 ## Description
 
 Generates sprite sheet image(s) and companion CSS from directories of images, so they can be used efficiently on a website. Ships as a CLI that runs as a pre-build step in a TypeScript/Node project.
