@@ -228,6 +228,79 @@
         color: var(--accent);
         text-decoration: none;
       }
+      /* Floating donation card — fixed to the corner, entirely clickable. */
+      .donate {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 50;
+        width: 236px;
+        display: block;
+        text-decoration: none;
+        color: var(--text);
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.22);
+        padding: 14px 14px 12px;
+        transition:
+          transform 0.1s ease,
+          box-shadow 0.15s ease,
+          border-color 0.15s ease;
+      }
+      .donate:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent);
+        box-shadow: 0 16px 38px rgba(15, 23, 42, 0.28);
+      }
+      .donate-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 700;
+        font-size: 13px;
+        margin: 0 0 6px;
+      }
+      .donate-title .donate-heart {
+        color: #ef4444;
+      }
+      .donate-msg {
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--muted);
+        margin: 0 0 10px;
+      }
+      .donate-qr {
+        display: block;
+        width: 130px;
+        height: 130px;
+        margin: 0 auto 10px;
+        border-radius: 8px;
+        background: #fff;
+        padding: 6px;
+        box-sizing: border-box;
+      }
+      .donate-cta {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-weight: 700;
+        font-size: 13px;
+        color: var(--accent);
+      }
+      @media (max-width: 480px) {
+        .donate {
+          right: 12px;
+          bottom: 12px;
+          width: 200px;
+          padding: 12px;
+        }
+        .donate-qr {
+          width: 108px;
+          height: 108px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -393,5 +466,28 @@ npx sprite-sheet-builder --config spritesheet.config.json</code></pre>
       >
       · the sheet and CSS on this page are regenerated on every deploy.
     </footer>
+
+    <a
+      class="donate"
+      href="https://donate.stripe.com/00w5kD3Gj1Xo9v7gVOcs800"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Donate via Stripe (opens in a new tab)"
+    >
+      <p class="donate-title"><span class="donate-heart">&#9829;</span> Support this project</p>
+      <p class="donate-msg">
+        If this app, code, or repository has helped you or someone you know,
+        please consider donating. I appreciate any help to offset the costs of
+        development and/or AI Credits.
+      </p>
+      <img
+        class="donate-qr"
+        src="donate-qr.png"
+        alt="QR code linking to the Stripe donation page"
+        width="130"
+        height="130"
+      />
+      <span class="donate-cta">Donate via Stripe &rarr;</span>
+    </a>
   </body>
 </html>
