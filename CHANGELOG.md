@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-17
+
 ### Fixed
 
 - Image discovery now excludes the resolved `outputDirectory` (and anything under it), so a generated sprite sheet written into a watched `assetDirectory` is never re-ingested as a source image on the next build.
