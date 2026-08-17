@@ -85,6 +85,7 @@ describe("spriteSheetBuilder", () => {
 
 interface FakeServer {
   watcher: EventEmitter & { add: (paths: string[]) => void };
+  httpServer: EventEmitter;
   ws: { send: (payload: unknown) => void };
   config: { logger: { info: (msg: string) => void; error: (msg: string) => void } };
 }
@@ -101,6 +102,7 @@ function createFakeServer(): {
   const logs: { level: "info" | "error"; msg: string }[] = [];
   const server: FakeServer = {
     watcher,
+    httpServer: new EventEmitter(),
     ws: { send: (payload) => sentMessages.push(payload) },
     config: {
       logger: {
@@ -347,6 +349,36 @@ describe("spriteSheetBuilder dev watching", () => {
         join(root, "assets", "icons-archive", "old-star.png"),
       );
 
+      await new Promise((r) => setTimeout(r, 250));
+
+      expect(sentMessages).toHaveLength(0);
+    } finally {
+      await removeFixtureDir(root);
+    }
+  });
+
+  test("stops rebuilding after the dev server closes", async () => {
+    const root = await createFixtureDir("sprite-sheet-builder-vite-close-");
+    try {
+      const assetDir = join(root, "assets", "icons");
+      await makeFixtureImage(root, "assets/icons/star.png", 10, 10);
+      const outputDirectory = join(root, "out");
+
+      const plugin = spriteSheetBuilder({
+        assetDirectory: [assetDir],
+        outputDirectory,
+      });
+      await extractHook(plugin.buildStart).call({});
+
+      const { server, sentMessages } = createFakeServer();
+      extractHook(plugin.configureServer)(server);
+
+      // Simulate the dev server shutting down.
+      server.httpServer.emit("close");
+
+      // A change after close must not trigger a rebuild or reload.
+      await makeFixtureImage(root, "assets/icons/moon.png", 8, 8);
+      server.watcher.emit("add", join(assetDir, "moon.png"));
       await new Promise((r) => setTimeout(r, 250));
 
       expect(sentMessages).toHaveLength(0);

@@ -62,6 +62,39 @@ describe("discoverImageGroups", () => {
     expect(byOutputPath.get("icons/social/nested")?.images).toHaveLength(1);
   });
 
+  test("excludes generated images under a nested outputDirectory (single)", async () => {
+    await touch("icons/out/sheet.png"); // simulated generated output
+
+    const groups = await discoverImageGroups({
+      assetDirectory: [join(root, "icons")],
+      recursive: "yes",
+      recursiveMethod: "single",
+      outputDirectory: join(root, "icons", "out"),
+    });
+
+    expect(groups).toHaveLength(1);
+    // a.png + social/b.jpg + social/nested/c.jpeg — but not out/sheet.png.
+    expect(groups[0]?.images).toHaveLength(3);
+    expect(groups[0]?.images.some((p) => p.endsWith("sheet.png"))).toBe(false);
+  });
+
+  test("does not create a group for a nested outputDirectory (directory)", async () => {
+    await touch("icons/out/sheet.png");
+
+    const groups = await discoverImageGroups({
+      assetDirectory: [join(root, "icons")],
+      recursive: "yes",
+      recursiveMethod: "directory",
+      outputDirectory: join(root, "icons", "out"),
+    });
+
+    const outputPaths = new Set(groups.map((group) => group.outputPath));
+    expect(outputPaths.has("icons/out")).toBe(false);
+    expect(outputPaths).toEqual(
+      new Set(["icons", "icons/social", "icons/social/nested"]),
+    );
+  });
+
   test("throws when two assetDirectory entries collide on outputPath", async () => {
     await touch("other/icons/d.png");
 
