@@ -2,6 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@richardmcquiston01/sprite-sheet-builder.svg)](https://www.npmjs.com/package/@richardmcquiston01/sprite-sheet-builder)
 [![license](https://img.shields.io/npm/l/@richardmcquiston01/sprite-sheet-builder.svg)](LICENSE)
+[![demo](https://img.shields.io/badge/demo-live-black?logo=vercel&logoColor=white)](https://sprite-sheet-builder.vercel.app)
 
 ## Description
 
