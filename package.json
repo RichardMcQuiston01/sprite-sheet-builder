@@ -1,6 +1,6 @@
 {
   "name": "@richardmcquiston01/sprite-sheet-builder",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Generate sprite sheets and companion CSS from directories of images.",
   "keywords": [
     "sprite-sheet",
