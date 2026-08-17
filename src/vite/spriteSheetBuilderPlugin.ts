@@ -26,8 +26,12 @@ export function spriteSheetBuilder(options: SpriteSheetConfig): Plugin {
     configureServer(server) {
       server.watcher.add(watchedDirectories);
 
+      let closed = false;
       const rebuilder = createSpriteSheetRebuilder(config, {
         onRebuild: () => {
+          if (closed) {
+            return;
+          }
           server.config.logger.info(
             "[sprite-sheet-builder] regenerated sprite sheet(s)",
             { timestamp: true },
@@ -35,6 +39,9 @@ export function spriteSheetBuilder(options: SpriteSheetConfig): Plugin {
           server.ws.send({ type: "full-reload" });
         },
         onError: (error) => {
+          if (closed) {
+            return;
+          }
           server.config.logger.error(
             `[sprite-sheet-builder] rebuild failed: ${error instanceof Error ? error.message : String(error)}`,
             { timestamp: true },
@@ -43,12 +50,26 @@ export function spriteSheetBuilder(options: SpriteSheetConfig): Plugin {
       });
 
       const handleFsEvent = (filePath: string) => {
-        rebuilder.notify(filePath);
+        if (!closed) {
+          rebuilder.notify(filePath);
+        }
       };
 
       server.watcher.on("add", handleFsEvent);
       server.watcher.on("change", handleFsEvent);
       server.watcher.on("unlink", handleFsEvent);
+
+      // Vite has no dedicated plugin teardown hook; the documented way to
+      // clean up resources created in configureServer is to listen for the
+      // httpServer "close" event. Stop watching and dispose the rebuilder so
+      // an in-flight rebuild can't send a reload after the server is gone.
+      server.httpServer?.once("close", () => {
+        closed = true;
+        server.watcher.off("add", handleFsEvent);
+        server.watcher.off("change", handleFsEvent);
+        server.watcher.off("unlink", handleFsEvent);
+        void rebuilder.close();
+      });
     },
   };
 }

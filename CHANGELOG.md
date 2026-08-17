@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Image discovery now excludes the resolved `outputDirectory` (and anything under it), so a generated sprite sheet written into a watched `assetDirectory` is never re-ingested as a source image on the next build.
+- The Vite plugin now disposes its rebuilder when the dev server closes: it stops watching and guards against an in-flight rebuild sending a full-reload after shutdown.
+
 ## [0.1.0] - 2026-08-12
 
 ### Added
