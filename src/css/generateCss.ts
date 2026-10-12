@@ -118,21 +118,41 @@ function assertUniqueWithinSheet(
   rules: readonly ClassRule[],
   sheetName: string,
 ): void {
-  const seen = new Set<string>();
+  const firstSourceByClass = new Map<string, string>();
   for (const rule of rules) {
-    if (seen.has(rule.className)) {
+    const firstSource = firstSourceByClass.get(rule.className);
+    if (firstSource !== undefined) {
       throw new Error(
         `Duplicate CSS class name ".${rule.className}" within sprite sheet "${sheetName}" ` +
-          `(from "${rule.image.sourcePath}"). Rename the source file to avoid the collision.`,
+          `("${firstSource}" and "${rule.image.sourcePath}" both produce it). ` +
+          `Rename one of the source files to avoid the collision.`,
       );
     }
-    seen.add(rule.className);
+    firstSourceByClass.set(rule.className, rule.image.sourcePath);
   }
 }
 
-/** Escapes a string for safe use inside a double-quoted CSS `url("...")`. */
+/**
+ * Escapes a string for safe use inside a double-quoted CSS `url("...")`.
+ * Backslashes and quotes get a backslash escape; control characters,
+ * non-printable/non-ASCII characters, and `<` (which could close an inlining
+ * `<style>` block) become CSS hex escapes, so a hostile path can never end
+ * the string or the declaration.
+ */
 function escapeCssUrl(url: string): string {
-  return url.replace(/[\\"]/g, "\\$&");
+  let escaped = "";
+  for (const character of url) {
+    const codePoint = character.codePointAt(0) ?? 0;
+    if (character === "\\" || character === '"') {
+      escaped += `\\${character}`;
+    } else if (codePoint < 0x20 || codePoint > 0x7e || character === "<") {
+      // A trailing space terminates the hex escape.
+      escaped += `\\${codePoint.toString(16)} `;
+    } else {
+      escaped += character;
+    }
+  }
+  return escaped;
 }
 
 function renderCss(rules: readonly ClassRule[], imageUrl: string): string {
@@ -141,7 +161,9 @@ function renderCss(rules: readonly ClassRule[], imageUrl: string): string {
     .map(
       (rule) =>
         `.${rule.className} {\n` +
+        `  display: inline-block;\n` +
         `  background-image: url("${url}");\n` +
+        `  background-repeat: no-repeat;\n` +
         `  background-position: -${rule.image.x}px -${rule.image.y}px;\n` +
         `  width: ${rule.image.width}px;\n` +
         `  height: ${rule.image.height}px;\n` +
@@ -150,9 +172,17 @@ function renderCss(rules: readonly ClassRule[], imageUrl: string): string {
     .join("\n\n");
 }
 
+/**
+ * Turns a file or directory name into a valid CSS class identifier. Unicode
+ * letters and digits are kept (so `étoile` stays `étoile` rather than losing
+ * its first letter); everything else collapses to a single `-`. A result that
+ * starts with a digit gets a `sprite-` prefix because identifiers cannot.
+ */
 function sanitize(name: string): string {
-  return name
+  const sanitized = name
+    .normalize("NFC")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
     .replace(/^-+|-+$/g, "");
+  return /^\p{N}/u.test(sanitized) ? `sprite-${sanitized}` : sanitized;
 }
