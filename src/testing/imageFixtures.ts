@@ -36,3 +36,29 @@ export async function makeFixtureImage(
     .png()
     .toFile(filePath);
 }
+
+/**
+ * Writes a solid-color JPEG at `<root>/<relativePath>` whose stored pixels are
+ * `width`x`height` and whose EXIF orientation tag is `orientation`.
+ */
+export async function makeOrientedJpeg(
+  root: string,
+  relativePath: string,
+  width: number,
+  height: number,
+  orientation: number,
+): Promise<void> {
+  const filePath = join(root, relativePath);
+  await mkdir(join(filePath, ".."), { recursive: true });
+  await sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: { r: 0, g: 128, b: 255 },
+    },
+  })
+    .jpeg()
+    .withMetadata({ orientation })
+    .toFile(filePath);
+}

@@ -117,4 +117,73 @@ describe("generateCss", () => {
     const files = generateCss(sheets, "/out", "multiple");
     expect(files[0]?.content).toContain('url("a\\"b.png")');
   });
+
+  test("hex-escapes newlines and other unsafe characters in the image URL (#18)", () => {
+    const sheets = [
+      sheet("foo\n} body { background: red; } .x<", [
+        { sourcePath: "/src/x/star.png", x: 0, y: 0, width: 10, height: 10 },
+      ]),
+    ];
+
+    const content = generateCss(sheets, "/out", "multiple")[0]?.content ?? "";
+
+    expect(content).not.toContain("<");
+    expect(content).toContain("\\a ");
+    // One rule: selector line, 6 declarations, closing brace.
+    expect(content.split("\n")).toHaveLength(8);
+  });
+
+  test("prefixes class names that start with a digit (#19)", () => {
+    const sheets = [
+      sheet("icons", [
+        { sourcePath: "/src/icons/2x.png", x: 0, y: 0, width: 10, height: 10 },
+        { sourcePath: "/src/icons/123.png", x: 10, y: 0, width: 10, height: 10 },
+      ]),
+    ];
+
+    const content = generateCss(sheets, "/out", "multiple")[0]?.content ?? "";
+
+    expect(content).toContain(".sprite-2x {");
+    expect(content).toContain(".sprite-123 {");
+  });
+
+  test("keeps Unicode letters in class names (#19)", () => {
+    const sheets = [
+      sheet("icons", [
+        { sourcePath: "/src/icons/étoile.png", x: 0, y: 0, width: 10, height: 10 },
+        { sourcePath: "/src/icons/toile.png", x: 10, y: 0, width: 10, height: 10 },
+      ]),
+    ];
+
+    const content = generateCss(sheets, "/out", "multiple")[0]?.content ?? "";
+
+    expect(content).toContain(".étoile {");
+    expect(content).toContain(".toile {");
+  });
+
+  test("duplicate class error names both source files (#19)", () => {
+    const sheets = [
+      sheet("icons", [
+        { sourcePath: "/src/icons/my star.png", x: 0, y: 0, width: 10, height: 10 },
+        { sourcePath: "/src/icons/my-star.png", x: 10, y: 0, width: 10, height: 10 },
+      ]),
+    ];
+
+    expect(() => generateCss(sheets, "/out", "multiple")).toThrow(
+      /my star\.png.*my-star\.png/,
+    );
+  });
+
+  test("every rule paints exactly one cell (#20)", () => {
+    const sheets = [
+      sheet("icons", [
+        { sourcePath: "/src/icons/star.png", x: 0, y: 0, width: 10, height: 10 },
+      ]),
+    ];
+
+    const content = generateCss(sheets, "/out", "multiple")[0]?.content ?? "";
+
+    expect(content).toContain("background-repeat: no-repeat;");
+    expect(content).toContain("display: inline-block;");
+  });
 });

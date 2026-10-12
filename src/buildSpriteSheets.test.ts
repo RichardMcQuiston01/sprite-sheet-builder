@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { join, sep } from "node:path";
 import sharp from "sharp";
-import { buildSpriteSheets } from "./buildSpriteSheets.ts";
+import { buildSpriteSheets, runPipeline } from "./buildSpriteSheets.ts";
+import { validateConfig } from "./config/loadConfig.ts";
+import type { ResolvedSpriteSheetConfig } from "./config/types.ts";
 import {
   createFixtureDir,
   makeFixtureImage,
+  makeOrientedJpeg,
   removeFixtureDir,
 } from "./testing/imageFixtures.ts";
 
@@ -85,5 +88,115 @@ describe("buildSpriteSheets (end-to-end)", () => {
     await expect(
       buildSpriteSheets(join(root, "big.config.json")),
     ).rejects.toThrow(/exceeding/i);
+  });
+
+  test("keeps output inside outputDirectory for a '..' directory name (#17)", async () => {
+    await makeFixtureImage(root, "dots/.. /evil/a.png", 4, 4);
+    const outputDirectory = join(root, "nested", "out");
+
+    const result = await runPipeline(
+      validateConfig({
+        assetDirectory: [join(root, "dots")],
+        recursive: "yes",
+        recursiveMethod: "directory",
+        outputDirectory,
+        generateCSSFile: "multiple",
+      }),
+    );
+
+    for (const sheet of result.sheets) {
+      expect(sheet.imageFile.startsWith(outputDirectory + sep)).toBe(true);
+    }
+    expect(result.sheets).toHaveLength(1);
+  });
+
+  test("applies JPEG EXIF orientation to packed dimensions (#22)", async () => {
+    await makeOrientedJpeg(root, "photos/side.jpg", 8, 4, 6);
+
+    const result = await runPipeline(
+      validateConfig({
+        assetDirectory: [join(root, "photos")],
+        outputDirectory: join(root, "out-photos"),
+        generateCSSFile: "off",
+      }),
+    );
+
+    const image = result.sheets[0]?.images[0];
+    expect(image?.width).toBe(4);
+    expect(image?.height).toBe(8);
+  });
+
+  describe("output cleanup (#21)", () => {
+    function configFor(
+      assetDirectory: string,
+      outputDirectory: string,
+      generateCSSFile: "off" | "single" | "multiple" = "multiple",
+    ): ResolvedSpriteSheetConfig {
+      return validateConfig({
+        assetDirectory: [assetDirectory],
+        recursive: "yes",
+        recursiveMethod: "directory",
+        outputDirectory,
+        generateCSSFile,
+      });
+    }
+
+    test("removes sheets and CSS for deleted directories but keeps unrelated files", async () => {
+      const outputDirectory = join(root, "out-clean");
+      const config = configFor(join(root, "src", "icons"), outputDirectory);
+      await runPipeline(config);
+      await writeFile(join(outputDirectory, "keep.txt"), "mine");
+      expect(await readdir(join(outputDirectory, "icons"))).toContain(
+        "nav.png",
+      );
+
+      await rm(join(root, "src", "icons", "nav"), { recursive: true });
+      await runPipeline(config);
+
+      const remaining = await readdir(join(outputDirectory, "icons"));
+      expect(remaining).not.toContain("nav.png");
+      expect(remaining).not.toContain("nav.css");
+      expect(remaining).toContain("social.png");
+      expect(await readFile(join(outputDirectory, "keep.txt"), "utf-8")).toBe(
+        "mine",
+      );
+    });
+
+    test("switching multiple to single CSS removes the old per-sheet CSS", async () => {
+      const outputDirectory = join(root, "out-switch");
+      await runPipeline(configFor(join(root, "src", "icons"), outputDirectory));
+      await runPipeline(
+        configFor(join(root, "src", "icons"), outputDirectory, "single"),
+      );
+
+      const files = await readdir(outputDirectory, { recursive: true });
+      expect(files).toContain("sprites.css");
+      expect(files.filter((file) => file.endsWith(".css"))).toEqual([
+        "sprites.css",
+      ]);
+    });
+
+    test("a failed build leaves the previous output untouched", async () => {
+      const outputDirectory = join(root, "out-atomic");
+      const config = configFor(join(root, "src", "icons"), outputDirectory);
+      await runPipeline(config);
+      const before = await readFile(
+        join(outputDirectory, "icons", "social.css"),
+        "utf-8",
+      );
+
+      // icon.png + icon.jpg sanitize to the same CSS class, so CSS generation throws.
+      await makeFixtureImage(root, "src/icons/social/dup.png", 5, 5);
+      await makeFixtureImage(root, "src/icons/social/dup.jpg", 5, 5);
+      await expect(runPipeline(config)).rejects.toThrow(/Duplicate CSS class/);
+
+      expect(
+        await readFile(join(outputDirectory, "icons", "social.css"), "utf-8"),
+      ).toBe(before);
+      const leftovers = (await readdir(outputDirectory)).filter((name) =>
+        name.startsWith(".staging-"),
+      );
+      expect(leftovers).toEqual([]);
+    });
   });
 });

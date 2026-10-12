@@ -1,4 +1,5 @@
-import { resolve, sep } from "node:path";
+import { resolve } from "node:path";
+import { isPathInside } from "../paths/pathContainment.ts";
 import { runPipeline } from "../buildSpriteSheets.ts";
 import type { BuildResult } from "../buildSpriteSheets.ts";
 import type { ResolvedSpriteSheetConfig } from "../config/types.ts";
@@ -61,17 +62,12 @@ export function createSpriteSheetRebuilder(
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   function isWatchedImage(filePath: string): boolean {
-    if (
-      filePath === resolvedOutputDirectory ||
-      filePath.startsWith(resolvedOutputDirectory + sep)
-    ) {
+    if (isPathInside(resolvedOutputDirectory, filePath)) {
       return false;
     }
     return (
       isSupportedImage(filePath) &&
-      watchedDirectories.some(
-        (dir) => filePath === dir || filePath.startsWith(dir + sep),
-      )
+      watchedDirectories.some((dir) => isPathInside(dir, filePath))
     );
   }
 

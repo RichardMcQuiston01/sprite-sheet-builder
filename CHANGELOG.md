@@ -2,6 +2,28 @@
 
 ## [Unreleased]
 
+### Security
+
+- `sharp` raised to `^0.35.5` (libvips/libheif/librsvg advisories GHSA-f88m-g3jw-g9cj, GHSA-rgj7-g3m4-5g8c, GHSA-wq5f-xc86-pv6w); unsupported decoders (TIFF, SVG, GIF, HEIF, ...) are blocked, and `bun run check:sharp` runs in CI, release, and `prepublishOnly`.
+- Generated files can no longer be written outside `outputDirectory`: `.`/`..` source directory names are neutralized, and every write is checked by real path. Watchers and discovery share the same real-path containment check.
+- Image URLs in generated CSS are fully escaped (newlines, control characters, non-ASCII, `<`).
+- CI and release workflows pin actions to commit SHAs and Bun to `1.4.2`; Dependabot keeps them current.
+
+### Changed
+
+- The release workflow now runs the sharp check, typecheck, tests, lint, and build before publishing.
+- Generated CSS rules include `display: inline-block` and `background-repeat: no-repeat`.
+- Class names keep Unicode letters, and names starting with a digit get a `sprite-` prefix (`2x.png` becomes `.sprite-2x`). Duplicate-class errors name both source files.
+- Discovery output is sorted by name (English collation, numeric-aware), so layouts are stable across platforms.
+- Builds are staged and committed together; output from a previous build that this build no longer produces is removed (tracked in `.sprite-sheet-builder-manifest.json`, so unrelated files are never deleted), and a failed build leaves the previous output untouched.
+
+### Fixed
+
+- JPEG EXIF orientation is applied when packing, and sources are composited losslessly.
+- Sheet names that differ only by case are rejected instead of silently overwriting each other.
+- Symlinked images and directories inside the asset directory are included; links that escape it are an error; directory cycles are skipped.
+- The Vite plugin tears down dev watching via `closeBundle`, so it works in middleware mode (`httpServer` is null).
+
 ## [0.1.1] - 2026-08-17
 
 ### Fixed

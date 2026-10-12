@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { MaxRectsPacker } from "maxrects-packer";
 import sharp from "sharp";
+import { assertInsideDirectory } from "../paths/pathContainment.ts";
 import type { SheetGroup } from "../discovery/discoverImageGroups.ts";
 
 /** Placement + source info for one image within a packed sheet. */
@@ -24,6 +25,19 @@ export interface PackedSheet {
   images: PackedImage[];
 }
 
+// This tool only claims PNG/JPEG support. sharp picks a decoder from file
+// contents, not the extension, so block the other loaders (and their larger
+// attack surface) from being reached through a misnamed file.
+sharp.block({
+  operation: [
+    "VipsForeignLoadNsgif",
+    "VipsForeignLoadTiff",
+    "VipsForeignLoadVips",
+    "VipsForeignLoadSvg",
+    "VipsForeignLoadHeif",
+  ],
+});
+
 /** Maximum width/height of a single sprite sheet, in pixels. */
 const MAX_SHEET_DIMENSION = 4096;
 /** Spacing kept between packed images to avoid background bleed. */
@@ -35,6 +49,29 @@ interface PackRect {
   x: number;
   y: number;
   sourcePath: string;
+}
+
+/** A decoded, EXIF-oriented source image ready to composite. */
+interface OrientedImage {
+  data: Buffer;
+  width: number;
+  height: number;
+}
+
+/**
+ * Decodes `sourcePath` with its EXIF orientation applied (so phone/camera
+ * JPEGs are upright and their dimensions match what viewers display), as
+ * lossless PNG data.
+ */
+async function loadOrientedImage(sourcePath: string): Promise<OrientedImage> {
+  const { data, info } = await sharp(sourcePath)
+    .rotate()
+    .png()
+    .toBuffer({ resolveWithObject: true });
+  if (!info.width || !info.height) {
+    throw new Error(`Could not read image dimensions for "${sourcePath}"`);
+  }
+  return { data, width: info.width, height: info.height };
 }
 
 /**
@@ -59,17 +96,14 @@ async function packGroup(
   group: SheetGroup,
   outputDirectory: string,
 ): Promise<PackedSheet> {
+  const orientedBySource = new Map<string, OrientedImage>();
   const rects: PackRect[] = await Promise.all(
     group.images.map(async (sourcePath) => {
-      const metadata = await sharp(sourcePath).metadata();
-      if (!metadata.width || !metadata.height) {
-        throw new Error(
-          `Could not read image dimensions for "${sourcePath}"`,
-        );
-      }
+      const oriented = await loadOrientedImage(sourcePath);
+      orientedBySource.set(sourcePath, oriented);
       return {
-        width: metadata.width,
-        height: metadata.height,
+        width: oriented.width,
+        height: oriented.height,
         x: 0,
         y: 0,
         sourcePath,
@@ -121,15 +155,14 @@ async function packGroup(
   }));
 
   const imageFile = join(outputDirectory, `${group.outputPath}.png`);
+  assertInsideDirectory(outputDirectory, imageFile);
   await mkdir(dirname(imageFile), { recursive: true });
 
-  const composites = await Promise.all(
-    packedImages.map(async (image) => ({
-      input: await sharp(image.sourcePath).toBuffer(),
-      left: image.x,
-      top: image.y,
-    })),
-  );
+  const composites = packedImages.map((image) => ({
+    input: orientedBySource.get(image.sourcePath)!.data,
+    left: image.x,
+    top: image.y,
+  }));
 
   await sharp({
     create: {
