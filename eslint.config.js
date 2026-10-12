@@ -9,12 +9,13 @@ export default tseslint.config(
   },
   {
     // The demo's Node build scripts run outside the bundled library.
-    files: ["demo/**/*.mjs"],
+    files: ["demo/**/*.mjs", "scripts/**/*.mjs"],
     languageOptions: {
       globals: {
         console: "readonly",
         process: "readonly",
         Buffer: "readonly",
+        URL: "readonly",
       },
     },
   },
