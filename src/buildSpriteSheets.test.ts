@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import sharp from "sharp";
-import { buildSpriteSheets } from "./buildSpriteSheets.ts";
+import { buildSpriteSheets, runPipeline } from "./buildSpriteSheets.ts";
+import { validateConfig } from "./config/loadConfig.ts";
 import {
   createFixtureDir,
   makeFixtureImage,
@@ -85,5 +86,25 @@ describe("buildSpriteSheets (end-to-end)", () => {
     await expect(
       buildSpriteSheets(join(root, "big.config.json")),
     ).rejects.toThrow(/exceeding/i);
+  });
+
+  test("keeps output inside outputDirectory for a '..' directory name (#17)", async () => {
+    await makeFixtureImage(root, "dots/.. /evil/a.png", 4, 4);
+    const outputDirectory = join(root, "nested", "out");
+
+    const result = await runPipeline(
+      validateConfig({
+        assetDirectory: [join(root, "dots")],
+        recursive: "yes",
+        recursiveMethod: "directory",
+        outputDirectory,
+        generateCSSFile: "multiple",
+      }),
+    );
+
+    for (const sheet of result.sheets) {
+      expect(sheet.imageFile.startsWith(outputDirectory + sep)).toBe(true);
+    }
+    expect(result.sheets).toHaveLength(1);
   });
 });

@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { MaxRectsPacker } from "maxrects-packer";
 import sharp from "sharp";
+import { assertInsideDirectory } from "../paths/pathContainment.ts";
 import type { SheetGroup } from "../discovery/discoverImageGroups.ts";
 
 /** Placement + source info for one image within a packed sheet. */
@@ -134,6 +135,7 @@ async function packGroup(
   }));
 
   const imageFile = join(outputDirectory, `${group.outputPath}.png`);
+  assertInsideDirectory(outputDirectory, imageFile);
   await mkdir(dirname(imageFile), { recursive: true });
 
   const composites = await Promise.all(

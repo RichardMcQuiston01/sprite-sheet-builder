@@ -1,5 +1,6 @@
 import { readdir } from "node:fs/promises";
-import { basename, join, resolve, sep } from "node:path";
+import { basename, join, resolve } from "node:path";
+import { isPathInside } from "../paths/pathContainment.ts";
 import { isSupportedImage } from "./supportedExtensions.ts";
 import type { ResolvedSpriteSheetConfig } from "../config/types.ts";
 
@@ -43,8 +44,7 @@ export async function discoverImageGroups(
     ? resolve(config.outputDirectory)
     : undefined;
   const isExcluded: ExcludePredicate = (path) =>
-    excludedDir !== undefined &&
-    (path === excludedDir || path.startsWith(excludedDir + sep));
+    excludedDir !== undefined && isPathInside(excludedDir, path);
 
   for (const assetDirectory of config.assetDirectory) {
     const rootDir = resolve(assetDirectory);
@@ -152,8 +152,15 @@ async function listImagesRecursively(
   return images;
 }
 
+/** Segments that `path.join` would collapse into a parent directory. */
+const DOT_SEGMENT_REPLACEMENTS: Readonly<Record<string, string>> = {
+  ".": "_",
+  "..": "__",
+};
+
 function sanitizeSegment(segment: string): string {
-  return segment.trim().replace(/[\\/]+/g, "-") || "root";
+  const trimmed = segment.trim().replace(/[\\/]+/g, "-");
+  return DOT_SEGMENT_REPLACEMENTS[trimmed] ?? (trimmed || "root");
 }
 
 function assertNoOutputPathCollisions(groups: SheetGroup[]): void {

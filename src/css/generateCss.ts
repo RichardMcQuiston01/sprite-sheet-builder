@@ -1,4 +1,5 @@
 import { basename, extname, join } from "node:path";
+import { assertInsideDirectory } from "../paths/pathContainment.ts";
 import type { GenerateCssFileOption } from "../config/types.ts";
 import type { PackedImage, PackedSheet } from "../pack/packSheets.ts";
 
@@ -40,8 +41,10 @@ function buildMultipleFile(
 ): CssFileOutput {
   const rules = classRulesForSheet(sheet);
   const imageUrl = `${basename(sheet.outputPath)}.png`;
+  const filePath = join(outputDirectory, `${sheet.outputPath}.css`);
+  assertInsideDirectory(outputDirectory, filePath);
   return {
-    filePath: join(outputDirectory, `${sheet.outputPath}.css`),
+    filePath,
     content: renderCss(rules, imageUrl),
   };
 }

@@ -1,4 +1,5 @@
-import { resolve, sep } from "node:path";
+import { resolve } from "node:path";
+import { isPathInside } from "../paths/pathContainment.ts";
 import { watch } from "chokidar";
 import type { FSWatcher } from "chokidar";
 import type { ResolvedSpriteSheetConfig } from "../config/types.ts";
@@ -34,9 +35,7 @@ export async function watchSpriteSheets(
 
   const watcher: FSWatcher = watch(watchedDirectories, {
     ignoreInitial: true,
-    ignored: (filePath) =>
-      filePath === resolvedOutputDirectory ||
-      filePath.startsWith(resolvedOutputDirectory + sep),
+    ignored: (filePath) => isPathInside(resolvedOutputDirectory, filePath),
   });
 
   const handleFsEvent = (filePath: string): void => {
