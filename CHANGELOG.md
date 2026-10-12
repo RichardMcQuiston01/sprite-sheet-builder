@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-12
+
 ### Security
 
 - `sharp` raised to `^0.35.5` (libvips/libheif/librsvg advisories GHSA-f88m-g3jw-g9cj, GHSA-rgj7-g3m4-5g8c, GHSA-wq5f-xc86-pv6w); unsupported decoders (TIFF, SVG, GIF, HEIF, ...) are blocked, and `bun run check:sharp` runs in CI, release, and `prepublishOnly`.
