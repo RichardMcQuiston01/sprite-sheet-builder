@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, realpath, stat } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { isPathInside } from "../paths/pathContainment.ts";
 import { isSupportedImage } from "./supportedExtensions.ts";
@@ -49,9 +49,10 @@ export async function discoverImageGroups(
   for (const assetDirectory of config.assetDirectory) {
     const rootDir = resolve(assetDirectory);
     const rootName = sanitizeSegment(basename(rootDir));
+    const rootRealDir = await realpath(rootDir);
 
     if (config.recursive === "no") {
-      const images = await listImagesIn(rootDir, isExcluded);
+      const images = await listImagesIn(rootDir, isExcluded, rootRealDir);
       if (images.length > 0) {
         groups.push({ outputPath: rootName, sourceDir: rootDir, images });
       }
@@ -59,7 +60,9 @@ export async function discoverImageGroups(
     }
 
     if (config.recursiveMethod === "single") {
-      const images = await listImagesRecursively(rootDir, isExcluded);
+      const images = await listImagesRecursively(rootDir, isExcluded, rootRealDir, [
+        rootRealDir,
+      ]);
       if (images.length > 0) {
         groups.push({ outputPath: rootName, sourceDir: rootDir, images });
       }
@@ -69,11 +72,118 @@ export async function discoverImageGroups(
     // recursive: "yes", recursiveMethod: "directory" — one sheet per
     // directory, including the root itself for any images that sit
     // directly in it.
-    await collectDirectoryGroups(rootDir, rootName, groups, isExcluded);
+    await collectDirectoryGroups(rootDir, rootName, groups, isExcluded, rootRealDir, [
+      rootRealDir,
+    ]);
   }
 
   assertNoOutputPathCollisions(groups);
   return groups;
+}
+
+/** What a directory entry is once any symlink has been followed. */
+type EntryKind = "file" | "directory";
+
+interface ResolvedEntry {
+  name: string;
+  path: string;
+  kind: EntryKind;
+  /** Real path of the entry (differs from `path` for symlinks). */
+  realPath: string;
+}
+
+/**
+ * Deterministic name ordering: English collation with numeric segments
+ * compared by value (`2.png` < `10.png`) and case ignored, with a code-unit
+ * tiebreak so names differing only by case still have a fixed order.
+ */
+const nameCollator = new Intl.Collator("en", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function compareNames(left: string, right: string): number {
+  const collated = nameCollator.compare(left, right);
+  if (collated !== 0) {
+    return collated;
+  }
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/**
+ * Reads `dir`, follows symlinks that stay inside `rootRealDir`, and returns
+ * the files and directories in sorted order (readdir order is not stable
+ * across platforms).
+ *
+ * @throws {Error} if a symlinked image or directory points outside
+ *   `rootRealDir`, or a symlinked image is broken.
+ */
+async function readSortedEntries(
+  dir: string,
+  rootRealDir: string,
+): Promise<ResolvedEntry[]> {
+  const dirents = await readdir(dir, { withFileTypes: true });
+  const resolved: ResolvedEntry[] = [];
+
+  for (const dirent of dirents) {
+    const path = join(dir, dirent.name);
+    if (dirent.isFile()) {
+      resolved.push({ name: dirent.name, path, kind: "file", realPath: path });
+    } else if (dirent.isDirectory()) {
+      resolved.push({
+        name: dirent.name,
+        path,
+        kind: "directory",
+        realPath: path,
+      });
+    } else if (dirent.isSymbolicLink()) {
+      const entry = await resolveSymlink(path, dirent.name, rootRealDir);
+      if (entry !== null) {
+        resolved.push(entry);
+      }
+    }
+  }
+
+  return resolved.sort((left, right) => compareNames(left.name, right.name));
+}
+
+async function resolveSymlink(
+  path: string,
+  name: string,
+  rootRealDir: string,
+): Promise<ResolvedEntry | null> {
+  let realPath: string;
+  let kind: EntryKind;
+  try {
+    realPath = await realpath(path);
+    const targetStats = await stat(realPath);
+    if (targetStats.isDirectory()) {
+      kind = "directory";
+    } else if (targetStats.isFile()) {
+      kind = "file";
+    } else {
+      return null;
+    }
+  } catch (error) {
+    if (isSupportedImage(name)) {
+      throw new Error(
+        `Symlink "${path}" could not be resolved (${error instanceof Error ? error.message : String(error)}). ` +
+          `Fix or remove the broken link.`,
+      );
+    }
+    return null;
+  }
+
+  if (kind === "file" && !isSupportedImage(name)) {
+    return null;
+  }
+  if (!isPathInside(rootRealDir, realPath)) {
+    throw new Error(
+      `Symlink "${path}" points to "${realPath}", which is outside the asset directory ` +
+        `"${rootRealDir}". Copy the target into the asset directory or remove the link.`,
+    );
+  }
+  return { name, path, kind, realPath };
 }
 
 async function collectDirectoryGroups(
@@ -81,35 +191,41 @@ async function collectDirectoryGroups(
   outputPath: string,
   groups: SheetGroup[],
   isExcluded: ExcludePredicate,
+  rootRealDir: string,
+  ancestors: readonly string[],
 ): Promise<void> {
   if (isExcluded(dir)) {
     return;
   }
-  const entries = await readdir(dir, { withFileTypes: true });
+  const entries = await readSortedEntries(dir, rootRealDir);
   const images = entries
     .filter(
       (entry) =>
-        entry.isFile() &&
+        entry.kind === "file" &&
         isSupportedImage(entry.name) &&
-        !isExcluded(join(dir, entry.name)),
+        !isExcluded(entry.path),
     )
-    .map((entry) => join(dir, entry.name));
+    .map((entry) => entry.path);
 
   if (images.length > 0) {
     groups.push({ outputPath, sourceDir: dir, images });
   }
 
-  const subdirectories = entries.filter((entry) => entry.isDirectory());
-  for (const subdirectory of subdirectories) {
-    const subdirectoryPath = join(dir, subdirectory.name);
-    if (isExcluded(subdirectoryPath)) {
+  for (const subdirectory of entries) {
+    if (
+      subdirectory.kind !== "directory" ||
+      isExcluded(subdirectory.path) ||
+      ancestors.includes(subdirectory.realPath)
+    ) {
       continue;
     }
     await collectDirectoryGroups(
-      subdirectoryPath,
+      subdirectory.path,
       `${outputPath}/${sanitizeSegment(subdirectory.name)}`,
       groups,
       isExcluded,
+      rootRealDir,
+      [...ancestors, subdirectory.realPath],
     );
   }
 }
@@ -117,36 +233,43 @@ async function collectDirectoryGroups(
 async function listImagesIn(
   dir: string,
   isExcluded: ExcludePredicate,
+  rootRealDir: string,
 ): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
+  const entries = await readSortedEntries(dir, rootRealDir);
   return entries
     .filter(
       (entry) =>
-        entry.isFile() &&
+        entry.kind === "file" &&
         isSupportedImage(entry.name) &&
-        !isExcluded(join(dir, entry.name)),
+        !isExcluded(entry.path),
     )
-    .map((entry) => join(dir, entry.name));
+    .map((entry) => entry.path);
 }
 
 async function listImagesRecursively(
   dir: string,
   isExcluded: ExcludePredicate,
+  rootRealDir: string,
+  ancestors: readonly string[],
 ): Promise<string[]> {
   if (isExcluded(dir)) {
     return [];
   }
-  const entries = await readdir(dir, { withFileTypes: true });
+  const entries = await readSortedEntries(dir, rootRealDir);
   const images: string[] = [];
   for (const entry of entries) {
-    const entryPath = join(dir, entry.name);
-    if (isExcluded(entryPath)) {
+    if (isExcluded(entry.path)) {
       continue;
     }
-    if (entry.isFile() && isSupportedImage(entry.name)) {
-      images.push(entryPath);
-    } else if (entry.isDirectory()) {
-      images.push(...(await listImagesRecursively(entryPath, isExcluded)));
+    if (entry.kind === "file" && isSupportedImage(entry.name)) {
+      images.push(entry.path);
+    } else if (entry.kind === "directory" && !ancestors.includes(entry.realPath)) {
+      images.push(
+        ...(await listImagesRecursively(entry.path, isExcluded, rootRealDir, [
+          ...ancestors,
+          entry.realPath,
+        ])),
+      );
     }
   }
   return images;
@@ -164,15 +287,19 @@ function sanitizeSegment(segment: string): string {
 }
 
 function assertNoOutputPathCollisions(groups: SheetGroup[]): void {
+  // Compare case-insensitively on every platform: Windows and macOS volumes
+  // are case-insensitive by default, and it keeps generated trees portable.
   const seen = new Map<string, string>();
   for (const group of groups) {
-    const existing = seen.get(group.outputPath);
+    const key = group.outputPath.normalize("NFC").toLowerCase();
+    const existing = seen.get(key);
     if (existing !== undefined) {
       throw new Error(
-        `Two source directories both resolve to sprite sheet "${group.outputPath}": ` +
+        `Two source directories both resolve to sprite sheet "${group.outputPath}" ` +
+          `(names are compared case-insensitively): ` +
           `"${existing}" and "${group.sourceDir}". Rename one of the directories to avoid the collision.`,
       );
     }
-    seen.set(group.outputPath, group.sourceDir);
+    seen.set(key, group.sourceDir);
   }
 }
