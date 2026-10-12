@@ -85,7 +85,7 @@ describe("spriteSheetBuilder", () => {
 
 interface FakeServer {
   watcher: EventEmitter & { add: (paths: string[]) => void };
-  httpServer: EventEmitter;
+  httpServer: EventEmitter | null;
   ws: { send: (payload: unknown) => void };
   config: { logger: { info: (msg: string) => void; error: (msg: string) => void } };
 }
@@ -374,7 +374,7 @@ describe("spriteSheetBuilder dev watching", () => {
       extractHook(plugin.configureServer)(server);
 
       // Simulate the dev server shutting down.
-      server.httpServer.emit("close");
+      server.httpServer?.emit("close");
 
       // A change after close must not trigger a rebuild or reload.
       await makeFixtureImage(root, "assets/icons/moon.png", 8, 8);
@@ -416,5 +416,46 @@ describe("spriteSheetBuilder dev watching", () => {
     } finally {
       await removeFixtureDir(root);
     }
+  });
+});
+
+describe("spriteSheetBuilder teardown", () => {
+  test("stops rebuilding after closeBundle when httpServer is null (middleware mode)", async () => {
+    const root = await createFixtureDir("sprite-sheet-builder-vite-teardown-");
+    try {
+      const assetDir = join(root, "assets", "icons");
+      await makeFixtureImage(root, "assets/icons/star.png", 10, 10);
+
+      const plugin = spriteSheetBuilder({
+        assetDirectory: [assetDir],
+        outputDirectory: join(root, "out"),
+      });
+      await extractHook(plugin.buildStart).call({});
+
+      const { server, sentMessages } = createFakeServer();
+      server.httpServer = null;
+      extractHook(plugin.configureServer)(server);
+      expect(server.watcher.listenerCount("change")).toBe(1);
+
+      await extractHook(plugin.closeBundle).call({});
+
+      expect(server.watcher.listenerCount("add")).toBe(0);
+      expect(server.watcher.listenerCount("change")).toBe(0);
+      expect(server.watcher.listenerCount("unlink")).toBe(0);
+
+      server.watcher.emit("change", join(assetDir, "star.png"));
+      await new Promise((r) => setTimeout(r, 300));
+      expect(sentMessages).toHaveLength(0);
+    } finally {
+      await removeFixtureDir(root);
+    }
+  });
+
+  test("closeBundle without a dev server is a no-op", async () => {
+    const plugin = spriteSheetBuilder({
+      assetDirectory: ["assets"],
+      outputDirectory: "out",
+    });
+    await extractHook(plugin.closeBundle).call({});
   });
 });

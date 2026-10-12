@@ -16,11 +16,20 @@ export function spriteSheetBuilder(options: SpriteSheetConfig): Plugin {
   const config = validateConfig(options);
   const watchedDirectories = config.assetDirectory.map((dir) => resolve(dir));
 
+  // Set by configureServer; stops watching and disposes the rebuilder.
+  // Idempotent, because both closeBundle and the httpServer "close" event
+  // may invoke it for the same server.
+  let teardownDevWatching: (() => Promise<void>) | undefined;
+
   return {
     name: "sprite-sheet-builder",
 
     async buildStart() {
       await runPipeline(config);
+    },
+
+    async closeBundle() {
+      await teardownDevWatching?.();
     },
 
     configureServer(server) {
@@ -59,16 +68,27 @@ export function spriteSheetBuilder(options: SpriteSheetConfig): Plugin {
       server.watcher.on("change", handleFsEvent);
       server.watcher.on("unlink", handleFsEvent);
 
-      // Vite has no dedicated plugin teardown hook; the documented way to
-      // clean up resources created in configureServer is to listen for the
-      // httpServer "close" event. Stop watching and dispose the rebuilder so
-      // an in-flight rebuild can't send a reload after the server is gone.
+      // Stop watching and dispose the rebuilder so an in-flight rebuild can't
+      // send a reload after the server is gone.
+      let teardownPromise: Promise<void> | undefined;
+      const teardown = (): Promise<void> => {
+        teardownPromise ??= (async () => {
+          closed = true;
+          server.watcher.off("add", handleFsEvent);
+          server.watcher.off("change", handleFsEvent);
+          server.watcher.off("unlink", handleFsEvent);
+          await rebuilder.close();
+        })();
+        return teardownPromise;
+      };
+      teardownDevWatching = teardown;
+
+      // `server.close()` runs every plugin's `closeBundle`, including in
+      // middleware mode where `httpServer` is null. (A function returned from
+      // `configureServer` is a post-middleware hook, not a teardown.) The
+      // httpServer listener is kept as an early fallback.
       server.httpServer?.once("close", () => {
-        closed = true;
-        server.watcher.off("add", handleFsEvent);
-        server.watcher.off("change", handleFsEvent);
-        server.watcher.off("unlink", handleFsEvent);
-        void rebuilder.close();
+        void teardown();
       });
     },
   };
