@@ -7,6 +7,7 @@ import { validateConfig } from "./config/loadConfig.ts";
 import {
   createFixtureDir,
   makeFixtureImage,
+  makeOrientedJpeg,
   removeFixtureDir,
 } from "./testing/imageFixtures.ts";
 
@@ -106,5 +107,21 @@ describe("buildSpriteSheets (end-to-end)", () => {
       expect(sheet.imageFile.startsWith(outputDirectory + sep)).toBe(true);
     }
     expect(result.sheets).toHaveLength(1);
+  });
+
+  test("applies JPEG EXIF orientation to packed dimensions (#22)", async () => {
+    await makeOrientedJpeg(root, "photos/side.jpg", 8, 4, 6);
+
+    const result = await runPipeline(
+      validateConfig({
+        assetDirectory: [join(root, "photos")],
+        outputDirectory: join(root, "out-photos"),
+        generateCSSFile: "off",
+      }),
+    );
+
+    const image = result.sheets[0]?.images[0];
+    expect(image?.width).toBe(4);
+    expect(image?.height).toBe(8);
   });
 });

@@ -51,6 +51,29 @@ interface PackRect {
   sourcePath: string;
 }
 
+/** A decoded, EXIF-oriented source image ready to composite. */
+interface OrientedImage {
+  data: Buffer;
+  width: number;
+  height: number;
+}
+
+/**
+ * Decodes `sourcePath` with its EXIF orientation applied (so phone/camera
+ * JPEGs are upright and their dimensions match what viewers display), as
+ * lossless PNG data.
+ */
+async function loadOrientedImage(sourcePath: string): Promise<OrientedImage> {
+  const { data, info } = await sharp(sourcePath)
+    .rotate()
+    .png()
+    .toBuffer({ resolveWithObject: true });
+  if (!info.width || !info.height) {
+    throw new Error(`Could not read image dimensions for "${sourcePath}"`);
+  }
+  return { data, width: info.width, height: info.height };
+}
+
 /**
  * Packs and composites each {@link SheetGroup} into a single PNG sprite
  * sheet under `outputDirectory`.
@@ -73,17 +96,14 @@ async function packGroup(
   group: SheetGroup,
   outputDirectory: string,
 ): Promise<PackedSheet> {
+  const orientedBySource = new Map<string, OrientedImage>();
   const rects: PackRect[] = await Promise.all(
     group.images.map(async (sourcePath) => {
-      const metadata = await sharp(sourcePath).metadata();
-      if (!metadata.width || !metadata.height) {
-        throw new Error(
-          `Could not read image dimensions for "${sourcePath}"`,
-        );
-      }
+      const oriented = await loadOrientedImage(sourcePath);
+      orientedBySource.set(sourcePath, oriented);
       return {
-        width: metadata.width,
-        height: metadata.height,
+        width: oriented.width,
+        height: oriented.height,
         x: 0,
         y: 0,
         sourcePath,
@@ -138,13 +158,11 @@ async function packGroup(
   assertInsideDirectory(outputDirectory, imageFile);
   await mkdir(dirname(imageFile), { recursive: true });
 
-  const composites = await Promise.all(
-    packedImages.map(async (image) => ({
-      input: await sharp(image.sourcePath).toBuffer(),
-      left: image.x,
-      top: image.y,
-    })),
-  );
+  const composites = packedImages.map((image) => ({
+    input: orientedBySource.get(image.sourcePath)!.data,
+    left: image.x,
+    top: image.y,
+  }));
 
   await sharp({
     create: {
