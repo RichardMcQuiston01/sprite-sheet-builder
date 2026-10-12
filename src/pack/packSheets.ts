@@ -24,6 +24,19 @@ export interface PackedSheet {
   images: PackedImage[];
 }
 
+// This tool only claims PNG/JPEG support. sharp picks a decoder from file
+// contents, not the extension, so block the other loaders (and their larger
+// attack surface) from being reached through a misnamed file.
+sharp.block({
+  operation: [
+    "VipsForeignLoadNsgif",
+    "VipsForeignLoadTiff",
+    "VipsForeignLoadVips",
+    "VipsForeignLoadSvg",
+    "VipsForeignLoadHeif",
+  ],
+});
+
 /** Maximum width/height of a single sprite sheet, in pixels. */
 const MAX_SHEET_DIMENSION = 4096;
 /** Spacing kept between packed images to avoid background bleed. */
