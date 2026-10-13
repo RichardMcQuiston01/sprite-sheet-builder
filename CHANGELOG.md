@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Security
+
+- Dev-dependency advisories cleared (`bun audit` reports none): `brace-expansion`, `esbuild`, `js-yaml`, `nanoid`, `postcss`, and `source-map-js` bumped within their ranges via `bun audit fix`. None of these ship in the published package.
+
+### Fixed
+
+- Dependabot now uses the `bun` ecosystem, so it can update `bun.lock`; the `npm` ecosystem failed on every run.
+
 ## [0.2.0] - 2026-10-12
 
 ### Security
