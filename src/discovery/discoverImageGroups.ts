@@ -169,6 +169,7 @@ async function resolveSymlink(
       throw new Error(
         `Symlink "${path}" could not be resolved (${error instanceof Error ? error.message : String(error)}). ` +
           `Fix or remove the broken link.`,
+        { cause: error },
       );
     }
     return null;

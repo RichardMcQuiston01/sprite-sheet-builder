@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- Broken-symlink errors now carry the underlying error as `cause` (required by `@eslint/js` 10's `preserve-caught-error` rule).
 - Dependabot now uses the `bun` ecosystem, so it can update `bun.lock`; the `npm` ecosystem failed on every run.
 
 ## [0.2.0] - 2026-10-12
