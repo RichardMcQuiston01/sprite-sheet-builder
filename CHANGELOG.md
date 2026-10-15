@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-15
+
 ### Security
 
 - Dev-dependency advisories cleared (`bun audit` reports none): `brace-expansion`, `esbuild`, `js-yaml`, `nanoid`, `postcss`, and `source-map-js` bumped within their ranges via `bun audit fix`. None of these ship in the published package.
