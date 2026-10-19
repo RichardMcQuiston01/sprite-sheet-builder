@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-19
+
+### Added
+
+- `funding` entry in `package.json` so `npm fund` and the npm package page show the donation link.
+- "Buy Me a Coffee" README section with a `donate.svg` QR code.
+
 ## [0.3.0] - 2026-10-15
 
 ### Security
