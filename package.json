@@ -65,7 +65,7 @@
     "prepublishOnly": "bun run check:sharp && bun run build"
   },
   "dependencies": {
-    "chokidar": "^4.0.3",
+    "chokidar": "^5.0.0",
     "maxrects-packer": "^2.7.3",
     "sharp": "^0.35.5"
   },
