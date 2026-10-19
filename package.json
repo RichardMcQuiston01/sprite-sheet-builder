@@ -19,6 +19,10 @@
   "bugs": {
     "url": "https://github.com/RichardMcQuiston01/sprite-sheet-builder/issues"
   },
+  "funding": {
+    "type": "individual",
+    "url": "https://donate.stripe.com/00w5kD3Gj1Xo9v7gVOcs800"
+  },
   "publishConfig": {
     "access": "public"
   },
